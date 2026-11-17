@@ -1,0 +1,1843 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Preventivo stampo a step</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon-192.png" type="image/png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<meta name="theme-color" content="#0e5a6e">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Preventivo">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<style>
+:root{
+  --bg:#eef1f3; --panel:#ffffff; --ink:#14232b; --muted:#5b6b74; --line:#d3dade;
+  --accent:#0e5a6e; --accent-ink:#ffffff; --input-bg:#fff9d6; --input-ink:#0b3fa8;
+  --res-bg:#e6eef2;
+  --ok-bg:#d4efdc; --ok-ink:#0f5a2b; --warn-bg:#fbe9b0; --warn-ink:#6b4a00;
+  --bad-bg:#f6d0c8; --bad-ink:#8a1f0e; --off-bg:#e2e6e9; --off-ink:#7a878e;
+  --bar:#0e5a6e; --bar-off:#b8c2c8; --bar-best:#1f9d55;
+  --dot-ok:#1f9d55; --dot-warn:#d9a400; --dot-todo:#c0392b;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#0f1a20; --panel:#16252d; --ink:#e4ecef; --muted:#93a4ad; --line:#2b3d47;
+    --accent:#4fb3cc; --accent-ink:#06222b; --input-bg:#2b2a12; --input-ink:#8db4ff;
+    --res-bg:#1d313b;
+    --ok-bg:#16402a; --ok-ink:#8fe0b0; --warn-bg:#4a3a0a; --warn-ink:#f2d27a;
+    --bad-bg:#4d1f17; --bad-ink:#ffb3a3; --off-bg:#223038; --off-ink:#7f929b;
+    --bar:#4fb3cc; --bar-off:#3a4b54; --bar-best:#4bd186;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#0f1a20; --panel:#16252d; --ink:#e4ecef; --muted:#93a4ad; --line:#2b3d47;
+  --accent:#4fb3cc; --accent-ink:#06222b; --input-bg:#2b2a12; --input-ink:#8db4ff;
+  --res-bg:#1d313b;
+  --ok-bg:#16402a; --ok-ink:#8fe0b0; --warn-bg:#4a3a0a; --warn-ink:#f2d27a;
+  --bad-bg:#4d1f17; --bad-ink:#ffb3a3; --off-bg:#223038; --off-ink:#7f929b;
+  --bar:#4fb3cc; --bar-off:#3a4b54; --bar-best:#4bd186;
+  color-scheme: dark;
+}
+*{box-sizing:border-box}
+html{font-size:15px}
+body{margin:0; background:var(--bg); color:var(--ink);
+  font-family:"Avenir Next","Segoe UI",system-ui,-apple-system,"Helvetica Neue",Arial,sans-serif;
+  line-height:1.45; font-variant-numeric:tabular-nums}
+.wrap{max-width:1320px; margin:0 auto; padding:18px 16px 60px}
+header{display:flex; flex-wrap:wrap; gap:12px; align-items:flex-end; justify-content:space-between; margin-bottom:12px}
+h1{font-size:1.6rem; line-height:1.15; margin:0; letter-spacing:-.01em}
+.sub{color:var(--muted); margin:4px 0 0; max-width:72ch}
+.tools{display:flex; gap:8px; flex-wrap:wrap}
+button{font:inherit; color:var(--ink); background:var(--panel); border:1px solid var(--line); border-radius:6px; padding:7px 12px; cursor:pointer}
+button:hover{border-color:var(--accent)}
+button.primary{background:var(--accent); color:var(--accent-ink); border-color:var(--accent); font-weight:600}
+button.small{padding:3px 9px; font-size:.85rem}
+button:disabled{opacity:.45; cursor:default}
+button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible{outline:2px solid var(--accent); outline-offset:2px}
+h2{font-size:1.15rem; margin:0 0 6px}
+h3.sub-h{font-size:.95rem; margin:14px 0 2px; color:var(--accent)}
+.card{background:var(--panel); border:1px solid var(--line); border-radius:8px; padding:16px; margin-bottom:16px}
+
+/* stepper */
+.steps{display:flex; gap:4px; overflow-x:auto; padding-bottom:6px; margin-bottom:14px; border-bottom:2px solid var(--line)}
+.step{flex:0 0 auto; display:flex; align-items:center; gap:7px; border:0; background:transparent; border-radius:6px 6px 0 0; padding:8px 11px; color:var(--muted); font-weight:600; font-size:.9rem}
+.step .no{display:inline-grid; place-items:center; width:22px; height:22px; border-radius:50%; background:var(--off-bg); color:var(--ink); font-size:.78rem}
+.step[aria-current="step"]{background:var(--panel); color:var(--ink); box-shadow:inset 0 -3px 0 var(--accent)}
+.step[aria-current="step"] .no{background:var(--accent); color:var(--accent-ink)}
+.dot{width:8px; height:8px; border-radius:50%; background:var(--off-bg)}
+.dot.ok{background:var(--dot-ok)} .dot.warn{background:var(--dot-warn)} .dot.todo{background:var(--dot-todo)}
+
+.layout{display:grid; grid-template-columns:minmax(0,1fr) 300px; gap:16px; align-items:start}
+@media (max-width:1050px){ .layout{grid-template-columns:minmax(0,1fr)} }
+.layout > main{min-width:0}
+aside{position:sticky; top:12px}
+@media (max-width:1050px){ aside{position:static} }
+.pane[hidden]{display:none}
+.msg{border-radius:6px; padding:8px 11px; margin-bottom:12px; font-size:.9rem}
+.msg.warn{background:var(--warn-bg); color:var(--warn-ink)}
+.msg.todo{background:var(--bad-bg); color:var(--bad-ink)}
+.msg.info{background:var(--res-bg); color:var(--ink)}
+.navbar{display:flex; justify-content:space-between; gap:10px; margin-top:4px}
+
+/* campi */
+.grid{display:grid; grid-template-columns:repeat(auto-fit,minmax(320px,1fr)); gap:4px 22px}
+.field{display:grid; grid-template-columns:1fr 150px; gap:2px 10px; align-items:center; padding:7px 0; border-bottom:1px solid var(--line)}
+.field[hidden]{display:none}
+.field label{font-weight:500}
+.field .note{grid-column:1 / -1; font-size:.8rem; color:var(--muted)}
+.field.stack{grid-template-columns:1fr}
+.field.sel{grid-template-columns:1fr 240px}
+@media (max-width:520px){ .field,.field.sel{grid-template-columns:1fr 130px} }
+.inwrap{display:flex; align-items:center; gap:5px}
+.inwrap input,.inwrap select,.inwrap textarea{width:100%; font:inherit; text-align:right; color:var(--input-ink); background:var(--input-bg); border:1px solid var(--line); border-radius:5px; padding:5px 7px}
+.inwrap select{text-align:left}
+.field.stack .inwrap input,.field.stack .inwrap textarea{text-align:left}
+.inwrap input[type=checkbox]{width:auto; margin-left:auto}
+.inwrap textarea{resize:vertical; min-height:96px; line-height:1.4}
+.unit{font-size:.8rem; color:var(--muted); min-width:36px}
+.calc{display:grid; grid-template-columns:1fr auto; gap:2px 10px; padding:6px 0; border-bottom:1px solid var(--line); align-items:baseline}
+.calc .v{background:var(--res-bg); border-radius:5px; padding:3px 9px; font-weight:600; text-align:right; min-width:96px}
+.calc .note{grid-column:1 / -1; font-size:.8rem; color:var(--muted)}
+.calc.b > span:first-child{font-weight:700}
+
+/* tabelle */
+.tablewrap{overflow-x:auto; border:1px solid var(--line); border-radius:6px}
+table{border-collapse:collapse; width:100%}
+th,td{padding:6px 8px; border-bottom:1px solid var(--line); text-align:center; white-space:nowrap}
+th{background:var(--res-bg); font-size:.84rem; color:var(--muted); font-weight:600}
+td.l, th.l{text-align:left}
+td.r, th.r{text-align:right}
+td input, td select{font:inherit; color:var(--input-ink); background:var(--input-bg); border:1px solid var(--line); border-radius:5px; padding:4px; width:88px; text-align:center}
+td input.txt{width:100%; min-width:220px; text-align:left}
+td select{text-align:left; width:auto; max-width:175px}
+td.out{background:var(--res-bg)}
+td.ok{background:var(--ok-bg); color:var(--ok-ink); font-weight:600}
+td.warn{background:var(--warn-bg); color:var(--warn-ink); font-weight:600}
+td.bad{background:var(--bad-bg); color:var(--bad-ink); font-weight:600}
+td.nd{background:var(--off-bg); color:var(--off-ink)}
+td.best{background:var(--ok-bg); color:var(--ok-ink); font-weight:700}
+tr.grp td{background:var(--accent); color:var(--accent-ink); font-weight:700; text-align:left}
+tr.strong td{font-weight:700}
+tr.tot td{font-weight:700; border-top:2px solid var(--ink)}
+.rownote{display:block; font-size:.76rem; color:var(--muted); font-weight:400; white-space:normal}
+#cmp td:first-child{text-align:left; position:sticky; left:0; background:var(--panel); z-index:1; min-width:240px; white-space:normal}
+#cmp tr.grp td:first-child{background:var(--accent)}
+#voci td:first-child{min-width:200px}
+#post td input{width:72px}
+#post td input.txt{width:100%; min-width:150px}
+#post td select{max-width:170px}
+#post th{white-space:normal}
+#voci td input.txt{min-width:200px}
+
+/* righello */
+.verdict{font-size:1.1rem; font-weight:700; margin:0 0 10px}
+.verdict.ok{color:var(--ok-ink)} .verdict.warn{color:var(--warn-ink)} .verdict.bad{color:var(--bad-ink)}
+.ruler{display:flex; gap:3px; align-items:flex-end; overflow-x:auto; padding-bottom:4px}
+.tick{flex:1 0 26px; min-width:26px; height:46px; border-radius:4px; display:flex; align-items:flex-end; justify-content:center; font-size:.78rem; padding-bottom:4px; font-weight:600}
+.tick.ok{background:var(--ok-bg); color:var(--ok-ink); height:62px}
+.tick.low{background:var(--warn-bg); color:var(--warn-ink); height:54px}
+.tick.short{background:var(--off-bg); color:var(--off-ink)}
+.tick.over{background:repeating-linear-gradient(135deg,var(--bad-bg) 0 5px,transparent 5px 9px); color:var(--bad-ink); border:1px solid var(--bad-bg)}
+.legend{display:flex; flex-wrap:wrap; gap:6px 16px; margin:10px 0 0; font-size:.85rem; color:var(--muted)}
+.legend i{display:inline-block; width:12px; height:12px; border-radius:3px; margin-right:6px; vertical-align:-1px}
+.tiles{display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:10px; margin:12px 0}
+.tile{background:var(--res-bg); border-radius:6px; padding:9px 11px}
+.tile b{display:block; font-size:1.25rem; line-height:1.15}
+.tile span{font-size:.82rem; color:var(--muted)}
+.tile.main{background:var(--accent); color:var(--accent-ink)}
+.tile.main span{color:var(--accent-ink); opacity:.85}
+
+/* riepilogo laterale */
+.sum h2{margin-bottom:10px}
+.sum .row{display:flex; justify-content:space-between; gap:10px; padding:6px 0; border-bottom:1px solid var(--line); font-size:.92rem}
+.sum .row b{text-align:right}
+.sum .big{font-size:1.35rem; font-weight:700}
+.badge{display:inline-block; border-radius:4px; padding:2px 7px; font-size:.8rem; font-weight:700}
+.badge.ok{background:var(--ok-bg); color:var(--ok-ink)} .badge.warn{background:var(--warn-bg); color:var(--warn-ink)} .badge.bad{background:var(--bad-bg); color:var(--bad-ink)}
+
+/* layout stampo */
+#layoutSvg svg rect.plate{fill:var(--res-bg); stroke:var(--muted)}
+#layoutSvg svg rect.ins{fill:var(--ok-bg); stroke:var(--ok-ink)}
+#layoutSvg svg rect.car{fill:var(--warn-bg); stroke:var(--warn-ink)}
+svg text{fill:var(--ink); font-family:inherit; font-size:12px}
+svg .axis{stroke:var(--line)} svg .muted{fill:var(--muted)}
+
+/* preventivo */
+.quote-grid{display:grid; grid-template-columns:330px minmax(0,1fr); gap:16px; align-items:start}
+@media (max-width:1250px){ .quote-grid{grid-template-columns:1fr} }
+.sheet{background:#ffffff; color:#14171a; border:1px solid var(--line); border-radius:4px; padding:30px 34px; font-size:.93rem; line-height:1.5}
+.sheet *{color:inherit}
+.sheet .head{display:flex; justify-content:space-between; gap:20px; flex-wrap:wrap; margin-bottom:18px}
+.sheet h3{margin:0 0 4px; font-size:1.5rem}
+.sheet h4{margin:18px 0 6px; font-size:1rem}
+.sheet .docno{text-align:right}
+.sheet .to{margin-bottom:12px; padding:10px 12px; background:#f3f5f6; border-radius:4px}
+.sheet table{width:100%; font-size:.9rem}
+.sheet th,.sheet td{border-bottom:1px solid #d9dde0; text-align:left; white-space:normal; padding:5px 6px; background:transparent; color:#14171a}
+.sheet th{font-weight:600; background:#f3f5f6}
+.sheet td.n,.sheet th.n{text-align:right; white-space:nowrap}
+.sheet tr.cat td{font-weight:700; background:#f3f5f6}
+.sheet tr.line td{color:#4a555c; font-size:.86rem}
+.sheet tr.line td:first-child{padding-left:20px}
+.sheet tr.tot td{font-weight:700; border-top:2px solid #14171a; border-bottom:0}
+.sheet .ph{color:#9aa4aa; font-style:italic}
+.sheet .sign{display:flex; gap:40px; margin-top:34px}
+.sheet .sign div{flex:1; border-top:1px solid #14171a; padding-top:4px; font-size:.82rem}
+.sheet .small{font-size:.82rem; color:#4a555c}
+.info ul{margin:.3em 0 0; padding-left:1.2em} .info li{margin:.25em 0}
+footer{color:var(--muted); font-size:.82rem; margin-top:8px}
+.hidden-input{display:none}
+
+@page{margin:15mm}
+@media print{
+  html{font-size:12.5px} body{background:#fff}
+  .wrap{padding:0; max-width:none}
+  header,.steps,aside,.navbar,.no-print,footer,.pane:not(#p11){display:none!important}
+  #p11{display:block!important}
+  .layout,.quote-grid{display:block}
+  .sheet{border:0; padding:0; border-radius:0}
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+<header>
+  <div>
+    <h1>Preventivo stampo a iniezione</h1>
+    <p class="sub">Dal componente al preventivo, uno step alla volta: quantità per anno, pressa, impronte, struttura e acciai dello stampo, costi e confronto.</p>
+  </div>
+  <div class="tools">
+    <button id="btnSave" type="button">Salva su file</button>
+    <button id="btnOpen" type="button">Apri file</button>
+    <button id="btnNew" type="button">Nuovo preventivo</button>
+    <button id="btnTheme" type="button">Tema</button>
+    <input type="file" id="fileIn" class="hidden-input" accept=".json,application/json">
+  </div>
+</header>
+
+<nav class="steps" id="steps" aria-label="Step del preventivo"></nav>
+
+<div class="layout">
+<main>
+
+<!-- 1 -->
+<section class="pane" id="p1">
+  <div id="m1"></div>
+  <div class="card"><h2>Commessa</h2><p class="sub">Dati del documento e del cliente. Il processo imposta alcuni valori predefiniti negli step successivi.</p><div class="grid" id="f1"></div></div>
+</section>
+
+<!-- 2 -->
+<section class="pane" id="p2" hidden>
+  <div id="m2"></div>
+  <div class="card"><h2>Componente</h2><p class="sub">Materiale, volume o peso, ingombro e complessità del pezzo. L’ingombro serve a stimare dimensioni e peso dello stampo.</p>
+    <div class="grid" id="f2"></div></div>
+  <div class="card"><h2>Libreria materiali</h2><p class="sub">Valori indicativi di letteratura, da verificare sulla scheda tecnica del grado usato: densità solida e del fuso, fattore di pressione per la forza di chiusura, tempo massimo di permanenza nel cilindro, corsa di dosaggio in diametri vite (D), diffusività termica e temperature per la stima del raffreddamento. Le cariche si aggiungono al pezzo con la loro percentuale in peso.</p>
+    <div class="tablewrap" style="margin-top:8px"><table id="mlib"></table></div>
+    <div style="margin-top:8px"><button class="small" id="btnAddMat" type="button">Aggiungi materiale</button></div>
+    <h3 class="sub-h">Cariche</h3>
+    <div class="tablewrap" style="max-width:560px; margin-top:6px"><table id="flib"></table></div>
+    <div style="margin-top:8px"><button class="small" id="btnAddFill" type="button">Aggiungi carica</button></div>
+  </div>
+</section>
+
+<!-- 3 -->
+<section class="pane" id="p3" hidden>
+  <div id="m3"></div>
+  <div class="card"><h2>Quantità per anno</h2><p class="sub">L’anno di picco dimensiona il numero di impronte; il totale del programma serve per l’ammortamento dello stampo e la vita dello stampo.</p>
+    <div class="tablewrap" style="margin:10px 0 6px"><table id="yrs"></table></div>
+  </div>
+  <div class="card"><h2>Calendario e margini</h2><div class="grid" id="f3"></div></div>
+</section>
+
+<!-- 4 -->
+<section class="pane" id="p4" hidden>
+  <div id="m4"></div>
+  <div class="card"><h2>Processo e ciclo</h2><div class="grid" id="f4"></div></div>
+  <div class="card"><h2>Stima del tempo ciclo (facoltativa)</h2><p class="sub">Tempo di raffreddamento dallo spessore di parete: t = s² ÷ (π² · a) · ln(8/π² · (T fuso − T stampo) ÷ (T estrazione − T stampo)), più i tempi di iniezione, mantenimento e movimento. Temperature e diffusività vengono dalla libreria materiali, salvo valori inseriti qui.</p>
+    <div id="m4b"></div><div class="grid" id="f4b"></div></div>
+</section>
+
+<!-- 5 -->
+<section class="pane" id="p5" hidden>
+  <div id="m5"></div>
+  <div class="card"><h2>Pressa</h2><p class="sub"><b>A occhio:</b> basta il costo orario (le verifiche risultano “da verificare”; se inserisci la capacità della vite resta il controllo dello shot). <b>Verifica completa:</b> controlla chiusura, iniezione, passaggio colonne e altezza stampo.</p>
+    <div class="grid" id="f5"></div></div>
+  <div class="card" id="cardCF"><h2>Aiuto di calcolo: forza di chiusura per impronta</h2><p class="sub">Facoltativo. Superficie proiettata × pressione in cavità × fattore materiale; il margine di sicurezza della pressa si applica sopra. Con “Usa questo valore” il risultato va nel campo della forza per impronta.</p>
+    <div class="grid" id="f5b"></div></div>
+</section>
+
+<!-- 6 -->
+<section class="pane" id="p6" hidden>
+  <div id="m6"></div>
+  <div class="card" aria-live="polite">
+    <p id="verdict" class="verdict"></p>
+    <div id="ruler" class="ruler" role="img" aria-label="Numero di impronte ammissibili"></div>
+    <div class="legend">
+      <span><i style="background:var(--off-bg)"></i>non copre il picco o sotto i minimi (corsa, permanenza)</span>
+      <span><i style="background:var(--warn-bg)"></i>fattibile, fuori dall’ottimo (vite o corsa)</span>
+      <span><i style="background:var(--ok-bg)"></i>fattibile</span>
+      <span><i style="background:repeating-linear-gradient(135deg,var(--bad-bg) 0 4px,transparent 4px 7px);border:1px solid var(--bad-bg)"></i>oltre i limiti di pressa o qualità</span>
+    </div>
+    <div id="limits" class="tiles"></div>
+  </div>
+  <div class="card"><h2>Calcoli</h2><div class="grid" id="ro6"></div></div>
+  <div class="card"><h2>Configurazioni da confrontare</h2><p class="sub">Numero di impronte di ogni colonna e, se serve, un ciclo diverso (gli stampi grandi possono avere cicli più lunghi). Vuoto = ciclo base.</p>
+    <div class="grid" id="f6n" style="margin-top:6px"></div>
+    <div class="tablewrap" style="margin-top:8px"><table id="cfgEd"></table></div></div>
+</section>
+
+<!-- 7 -->
+<section class="pane" id="p7" hidden>
+  <div id="m7"></div>
+  <div class="card"><h2>Classe e acciai dello stampo</h2><p class="sub">La classe propone vita prevista e acciai; puoi cambiare ogni scelta. I prezzi degli acciai sono nella libreria in fondo.</p>
+    <div class="grid" id="f7a"></div></div>
+  <div class="card"><h2>Layout e dimensioni</h2><p class="sub">Disposizione automatica delle impronte in righe × colonne, con un tassello matrice e un tassello punzone per impronta. Dimensioni e pesi sono stime per il preventivo.</p>
+    <div class="grid" id="f7b"></div></div>
+  <div class="card"><h2>Distinta stimata – configurazione quotata</h2>
+    <div class="grid" style="align-items:start">
+      <div id="layoutSvg"></div>
+      <div id="ro7"></div>
+    </div>
+    <div class="tablewrap" style="margin-top:12px"><table id="bom"></table></div>
+  </div>
+  <div class="card"><h2>Libreria acciai</h2><p class="sub">Prezzi indicativi al kg per piccoli lotti tagliati a misura, costo del trattamento termico al kg (0 per i pre-bonificati) e fattore di lavorabilità, che moltiplica le ore di lavorazione dei componenti in quell’acciaio. Sono ipotesi: sostituiscile con i prezzi dei tuoi fornitori.</p>
+    <div class="tablewrap" style="margin-top:8px"><table id="lib"></table></div>
+    <div style="margin-top:8px"><button class="small" id="btnAddSteel" type="button">Aggiungi acciaio</button></div>
+  </div>
+</section>
+
+<!-- 8 -->
+<section class="pane" id="p8" hidden>
+  <div id="m8"></div>
+  <div class="card"><h2>Modalità di calcolo</h2><div class="grid" id="f8a"></div>
+    <div id="tiles8" class="tiles"></div></div>
+  <div class="card" id="cardExt"><h2>Stampo da fornitore esterno</h2><p class="sub">Prezzo dello stampo completo, esclusa la progettazione. Se hai un’offerta per una configurazione, inseriscila nella sua colonna; le altre usano la stima fisso + per impronta.</p>
+    <div class="grid" id="f8ext"></div>
+    <div class="tablewrap" style="margin-top:10px"><table id="ovr"></table></div></div>
+  <div class="card"><h2>Progettazione</h2><p class="sub">Voce sempre separata, in entrambe le modalità.</p><div class="grid" id="f8p"></div></div>
+  <div class="card"><h2>Collaudo dimensionale e documentazione</h2><p class="sub">Ore = quote × pezzi × minuti per quota, a tariffa metrologia: rilievo di campionatura (ISIR) su ogni impronta di ogni stampo, studio di capacità Cp/Cpk se richiesto, più le ore di documentazione (PPAP). Vale in entrambe le modalità.</p><div class="grid" id="f8q"></div></div>
+  <div class="card" id="cardAuto"><h2>Voci calcolate dalla struttura (configurazione quotata)</h2><p class="sub">Acciai, portastampo, trattamenti termici e canale caldo, dagli step 4 e 7.</p>
+    <div class="tablewrap" style="margin-top:8px"><table id="auto"></table></div></div>
+  <div class="card" id="cardVoci"><h2>Altre voci</h2><p class="sub">Ore o importi fissi più una quota per impronta, per carro o per sollevatore. Il fattore applica la lavorabilità dell’acciaio (e la finitura) dello step 7. Valori di esempio da adattare.</p>
+    <div class="tablewrap" style="margin-top:8px"><table id="voci"></table></div></div>
+  <div class="card"><h2>Tariffe orarie</h2><p class="sub">Tariffe di esempio, ricavate da fasce di mercato pubblicate per l’Europa meridionale dove disponibili (vedi Note). Una modifica vale per tutte le voci che usano quella tariffa.</p>
+    <div class="tablewrap" style="margin-top:8px; max-width:560px"><table id="rates"></table></div></div>
+</section>
+
+<!-- 9 -->
+<section class="pane" id="p9" hidden>
+  <div id="m9"></div>
+  <div class="card"><h2>Confronto configurazioni</h2><p class="sub">Ammortamento dello stampo distribuito su tutti i pezzi del programma. La configurazione da quotare si sceglie nel riepilogo a lato.</p>
+    <div class="tablewrap" style="margin-top:8px"><table id="cmp"></table></div></div>
+  <div class="card"><h2>Costo totale per pezzo</h2><div id="chart"></div></div>
+  <div class="card"><h2>Anno per anno – configurazione quotata</h2>
+    <div class="tablewrap" style="margin-top:8px"><table id="yr2"></table></div></div>
+</section>
+
+<!-- 10 -->
+<section class="pane" id="p10" hidden>
+  <div id="m10"></div>
+  <div class="card"><h2>Prezzo del pezzo stampato</h2><p class="sub">Costo medio sull’intero programma per la configurazione quotata, con il dettaglio anno per anno: stampaggio, materiale, allestimenti e avviamenti dei lotti, controlli per lotto, lavorazioni post-stampaggio e imballo.</p>
+    <div class="grid" id="g10c"></div>
+    <div id="tiles10" class="tiles"></div>
+    <div style="display:grid; gap:12px">
+      <div class="tablewrap" style="max-width:620px"><table id="pcB"></table></div>
+      <div class="tablewrap"><table id="pcY"></table></div>
+    </div></div>
+  <div class="card"><h2>Lotti, allestimento e avviamento</h2><p class="sub">Lotto = il maggiore tra una frazione del fabbisogno annuo e la durata minima di produzione, arrotondato per eccesso ai pezzi per scatola e mai oltre il fabbisogno dell’anno. A ogni lotto: allestimento, spurgo e stampate scartate, per ogni stampo in parallelo.</p>
+    <div class="grid" id="g10a"></div></div>
+  <div class="card"><h2>Lavorazioni post-stampaggio</h2><p class="sub">Aggiungi solo le righe che servono: forno (post-vulcanizzazione, ricottura, condizionamento), cernita o controllo al 100%, sbavatura, assemblaggio, lavorazioni esterne. Ogni riga si calcola a produttività, a carica, a corpo per pezzo o a corpo per lotto.</p>
+    <div class="tools" id="postAdd" style="margin:6px 0 10px"></div>
+    <div class="tablewrap"><table id="post"></table></div>
+    <h3 class="sub-h">Aiuto di calcolo: pezzi per carica del forno</h3>
+    <div class="grid" id="g10ov"></div></div>
+  <div class="card"><h2>Imballo</h2><p class="sub">Pezzi per scatola dal volume utile (riempimento in %) e dal peso massimo ammesso, salvo valore inserito.</p><div class="grid" id="g10b"></div></div>
+  <div class="card"><h2>Controlli qualità per lotto</h2><p class="sub">Rilievi SPC a ogni lotto: quote × pezzi × minuti per quota (gli stessi del collaudo stampo), a tariffa metrologia.</p><div class="grid" id="g10q"></div></div>
+</section>
+
+<!-- 11 -->
+<section class="pane" id="p11" hidden>
+  <div id="m11" class="no-print"></div>
+  <div class="quote-grid">
+    <div class="no-print" style="display:grid; gap:16px">
+      <div class="card" style="margin:0"><h2>Stampa</h2><p class="sub" id="qhint"></p>
+        <div class="tools" style="margin-top:10px"><button id="btnPrint" class="primary" type="button">Stampa / salva in PDF</button></div></div>
+      <div class="card" style="margin:0"><h2>Contenuto</h2><div id="f10a"></div></div>
+      <div class="card" style="margin:0"><h2>Condizioni</h2><div id="f10b"></div></div>
+      <div class="card" style="margin:0"><h2>Dati della tua azienda</h2><div id="f10c"></div></div>
+    </div>
+    <div><div class="sheet" id="sheet" aria-label="Anteprima del preventivo"></div></div>
+  </div>
+</section>
+
+<!-- 12 -->
+<section class="pane" id="p12" hidden>
+  <div class="card"><h2>Salvataggio</h2>
+    <p class="sub">I dati restano salvati in questo browser, ma per un solo preventivo alla volta. Per archiviare, duplicare o riaprire i preventivi usa i file: ogni file contiene il preventivo completo, comprese librerie, tariffe, voci e lavorazioni.</p>
+    <div class="tools" style="margin-top:12px">
+      <button class="primary" id="btnSave2" type="button">Salva su file</button>
+      <button id="btnOpen2" type="button">Apri file</button>
+      <button id="btnNew2" type="button">Nuovo preventivo (mantiene libreria, tariffe e voci)</button>
+      <button id="btnReset" type="button">Ripristina tutti i valori di esempio</button>
+    </div>
+    <p class="sub" id="saveMsg" style="margin-top:10px"></p>
+  </div>
+  <div class="card info"><h2>Note e limiti</h2>
+    <ul>
+      <li><b>Tutti i prezzi, le ore e le tariffe sono ipotesi di esempio.</b> Per le tariffe ho usato fasce pubblicate per l’Europa meridionale nel 2026 (fresatura 3 assi circa 45-75 €/h, 5 assi 90-160 €/h, erosione 70-120 €/h, rettifica 55-95 €/h); per gli acciai fasce di prezzo da distributore per piastre P20 (circa 1.500-3.500 $/t in Europa) e 1.2343 (circa 2,5-4 $/kg, fino a 5-7 $/kg per spessori grandi), aumentate per piccoli lotti tagliati a misura; per la tempra sottovuoto con doppio rinvenimento un prezzo medio europeo di circa 2 €/kg, aumentato per lotti piccoli. Banco, lucidatura, progettazione, prove, normalizzati, ugelli e prezzi dei materiali plastici sono stime senza una fonte specifica.</li>
+      <li><b>Geometria:</b> impronte in righe × colonne quasi quadrate, un tassello matrice e uno punzone per impronta, stampo a due piastre con castello e doppia piastra estrattori. Le dimensioni reali dipendono dal progetto (raffreddamento, iniezione, viti, guide): usale come ordine di grandezza.</li>
+      <li><b>Pesi</b> calcolati sul grezzo (dimensioni + sovrametallo) con densità 7,85 kg/dm³.</li>
+      <li><b>Portastampo normalizzato:</b> prezzo stimato come acciaio al kg più un sovrapprezzo di lavorazione al kg. Con un preventivo da catalogo è più preciso usare la modalità “voce unica” o correggere il sovrapprezzo.</li>
+      <li><b>Volume iniettato:</b> calcolato sul peso (pezzo + canali) diviso la densità del fuso, perché la vite dosa materiale fuso, che occupa più volume del pezzo solido (10-25% in più).</li>
+      <li><b>Cariche:</b> densità solida e del fuso con la regola delle miscele (1/ρ = (1−w)/ρ polimero + w/ρ carica). Fattore di pressione, permanenza e diffusività restano quelli del polimero base: correggili in libreria per un compound specifico.</li>
+      <li><b>Corsa di dosaggio:</b> volume di fuso dello shot ÷ sezione della vite, espresso in diametri (D). Fuori dai limiti min/max del materiale la configurazione è scartata; fuori dall’ottimo è segnalata. Il calcolo non include decompressione e cuscino.</li>
+      <li><b>Tempo di permanenza:</b> 0,8 × volume dei canali della vite ÷ volume dello shot × tempo ciclo. Se il volume dei canali non è inserito si stima come 1,85 × capacità di iniezione, rapporto tipico di viti standard da confermare con il costruttore della pressa.</li>
+      <li><b>Pressa:</b> la forza di chiusura per impronta si inserisce a mano o con l’aiuto di calcolo (superficie proiettata in cm² × pressione in cavità in bar × fattore materiale ÷ 1000; 1 t considerata 10 kN). Il passaggio colonne è verificato sull’ingombro stimato delle piastre di fissaggio.</li>
+      <li><b>Tempo di raffreddamento:</b> formula per piastra piana con raffreddamento sui due lati; dà un ordine di grandezza. Non vale per l’LSR, dove il ciclo dipende dalla reticolazione.</li>
+      <li><b>Prezzo del pezzo:</b> stampaggio = tariffa della modalità scelta (pressa + operatore) ÷ pezzi buoni/ora; materiale con canali e scarto; per lotto allestimento, spurgo, stampate di avviamento e controlli SPC, divisi per i pezzi dell’anno; lavorazioni post-stampaggio e imballo per pezzo; spese generali sul costo e margine sul prezzo. Il prezzo medio è pesato sulle quantità dei singoli anni.</li>
+      <li><b>Fermi programmati</b> (pulizia stampo, manutenzione): efficienza = ore tra due fermi ÷ (ore tra due fermi + durata del fermo); riduce pezzi/ora e capacità.</li>
+      <li><b>Stampi in parallelo:</b> stampi uguali su presse uguali; capacità e costo dello stampo si moltiplicano, la progettazione e lo studio Cp/Cpk si contano una volta, il rilievo ISIR per ogni impronta di ogni stampo.</li>
+      <li><b>Non sono verificati</b> bilanciamento del riempimento, equilibrio termico, variabilità tra cavità e corsa di apertura.</li>
+      <li><b>Preventivo:</b> imprevisti e margine sono distribuiti in proporzione sulle categorie mostrate al cliente. I testi delle condizioni sono un modello da far rivedere; verifica aliquota IVA e dati obbligatori.</li>
+    </ul>
+  </div>
+</section>
+
+<div class="navbar no-print"><button id="btnPrev" type="button">← Indietro</button><button id="btnNext" class="primary" type="button">Avanti →</button></div>
+</main>
+
+<aside class="no-print">
+  <div class="card sum" id="sum"></div>
+</aside>
+</div>
+<footer>I valori iniziali sono esempi. I dati restano salvati in questo browser, sul tuo computer; per archiviarli usa “Salva su file”.</footer>
+</div>
+
+<script>
+(function(){
+"use strict";
+const $ = id => document.getElementById(id);
+const KEY = "preventivo-stampo-step-v3";
+const NCFG = 8;
+const RHO = 7.85e-6; // kg/mm³
+
+/* ============================================================ costanti */
+const MATF = ["code","name","rho","rhoM","F","cost","perm","dMin","dLo","dHi","dMax","a","Tm","Tw","Te"];
+const MATH = ["Sigla","Nome","ρ solido (g/cm³)","ρ fuso (g/cm³)","Fattore pressione","€/kg","Permanenza max (min)","Corsa min (D)","Ottimo da (D)","Ottimo a (D)","Corsa max (D)","a eff (mm²/s)","T fuso (°C)","T stampo (°C)","T estrazione (°C)"];
+const M_ = (code,name,rho,rhoM,F,cost,perm,dMin,dLo,dHi,dMax,a,Tm,Tw,Te)=>({code,name,rho,rhoM,F,cost,perm,dMin,dLo,dHi,dMax,a,Tm,Tw,Te});
+const MATLIB0 = [
+  M_("PP","Polipropilene",0.905,0.75,1.0,1.6,10,0.5,1,3,4,0.07,230,40,90),
+  M_("PE-HD","Polietilene alta densità",0.955,0.76,1.0,1.5,10,0.5,1,3,4,0.09,230,30,85),
+  M_("PE-LD","Polietilene bassa densità",0.92,0.76,1.0,1.6,10,0.5,1,3,4,0.09,210,30,70),
+  M_("PS","Polistirene",1.05,0.95,1.0,1.8,8,0.5,1,3,4,0.09,220,40,80),
+  M_("ABS","Acrilonitrile-butadiene-stirene",1.05,0.95,1.3,2.6,6,0.5,1,3,4,0.083,240,60,95),
+  M_("PC","Policarbonato",1.20,1.05,1.8,3.6,8,1,1,3,3.5,0.11,300,90,130),
+  M_("PC+ABS","Policarbonato / ABS",1.15,1.00,1.6,3.4,6,1,1,3,3.5,0.09,270,80,110),
+  M_("PMMA","Polimetilmetacrilato",1.18,1.05,1.6,3.2,8,1,1,3,3.5,0.08,240,60,90),
+  M_("PA6","Poliammide 6",1.13,0.97,1.3,3.0,6,0.5,1,3,4,0.085,260,80,140),
+  M_("PA66","Poliammide 66",1.14,0.97,1.3,3.4,6,0.5,1,3,4,0.086,285,80,150),
+  M_("POM","Poliossimetilene",1.41,1.17,1.3,3.0,5,1,1,3,3.5,0.075,210,90,125),
+  M_("PBT","Polibutilene tereftalato",1.31,1.12,1.4,3.4,5,1,1,3,3.5,0.09,250,70,130),
+  M_("PVC-U","PVC rigido",1.38,1.22,1.6,2.0,3,1,1,2.5,3,0.07,190,40,70),
+  M_("TPE","Elastomero termoplastico",0.97,0.86,1.0,4.5,8,0.5,1,3,4,0.08,210,30,70),
+  M_("TPU","Poliuretano termoplastico",1.20,1.05,1.0,6.0,8,0.5,1,3,4,0.08,215,30,80),
+  M_("PPS","Polifenilensolfuro",1.35,1.17,1.5,9.0,5,1,1,3,3.5,0.09,320,140,180),
+  M_("LSR","Silicone liquido",1.12,1.12,0.5,12,"","","","","","","","","")];
+const MATLIB_BLANK = M_("","",'','','','','','','','','','','','','');
+const FILLS0 = [{code:"GF",name:"Fibra di vetro",rho:2.55},{code:"TALC",name:"Talco",rho:2.75},{code:"CACO3",name:"Carbonato di calcio",rho:2.71},
+  {code:"GB",name:"Microsfere di vetro",rho:2.50},{code:"CF",name:"Fibra di carbonio",rho:1.80}];
+const CLASSI_Q = [["std","Standard (tolleranze generali)",32],["tec","Tecnico",16],["str","Tolleranze strette",8],["med","Medicale / ottico",4]];
+const FINITURE = [["std","Standard",1],["luc","Lucida",1.5],["spec","Specchio",2.5],["tex","Satinata / per texture (texture esclusa)",0.8]];
+const FEEDS = [["freddo","Canale freddo",20],["caldo","Canale caldo",0],["colddeck","Cold deck (LSR)",3]];
+const CLASSI_S = [
+  {k:"proto",label:"Prototipo / preserie",vita:50000,plate:"1.1730",plateFig:"1.1730",fig:"1.2312",carri:"1.2312"},
+  {k:"bassa",label:"Produzione bassa",vita:300000,plate:"1.1730",plateFig:"1.2312",fig:"1.2312",carri:"1.2312"},
+  {k:"media",label:"Produzione media",vita:1000000,plate:"1.1730",plateFig:"1.2312",fig:"1.2738",carri:"1.2312"},
+  {k:"alta",label:"Alta produzione",vita:3000000,plate:"1.1730",plateFig:"1.2312",fig:"1.2343",carri:"1.2343"}];
+const LIB0 = [
+  {code:"1.1730",desc:"C45U – acciaio non legato",stato:"Naturale / ricotto",eurkg:2.5,tratt:0,lav:0.9},
+  {code:"1.2312",desc:"40CrMnMoS8-6 (P20+S)",stato:"Pre-bonificato ~30 HRC",eurkg:4,tratt:0,lav:1},
+  {code:"1.2311",desc:"40CrMnMo7 (P20)",stato:"Pre-bonificato ~30 HRC",eurkg:4,tratt:0,lav:1},
+  {code:"1.2738",desc:"40CrMnNiMo8-6-4 (P20+Ni)",stato:"Pre-bonificato ~32 HRC",eurkg:4.8,tratt:0,lav:1.05},
+  {code:"1.2343",desc:"X38CrMoV5-1 ESR (H11)",stato:"Temprato 48-52 HRC",eurkg:7,tratt:3,lav:1.35},
+  {code:"1.2344",desc:"X40CrMoV5-1 ESR (H13)",stato:"Temprato 48-52 HRC",eurkg:7.5,tratt:3,lav:1.4},
+  {code:"1.2083",desc:"X40Cr14 ESR – inox",stato:"Temprato 50-52 HRC",eurkg:8,tratt:3,lav:1.5},
+  {code:"1.2316",desc:"X38CrMo16 – inox",stato:"Pre-bonificato ~30 HRC",eurkg:8.5,tratt:0,lav:1.25}];
+const RATES0 = [
+  {k:"prog",l:"Progettazione e CAM",v:55},{k:"fres",l:"Fresatura CNC 3 assi",v:60},{k:"hsc",l:"Fresatura HSC / 5 assi",v:100},
+  {k:"edm",l:"Erosione a tuffo",v:75},{k:"filo",l:"Erosione a filo",v:75},{k:"rett",l:"Rettifica",v:65},
+  {k:"luc",l:"Lucidatura",v:45},{k:"banco",l:"Banco e aggiustaggio",v:45},{k:"prove",l:"Prove stampo (pressa + tecnico)",v:90},{k:"metro",l:"Metrologia",v:55}];
+const VCATS = ["Materiali","Lavorazioni","Trattamenti","Collaudo e documentazione","Altro"];
+const ROWS0 = [
+  {cat:"Materiali",desc:"Componenti normalizzati (colonne, bussole, estrattori, viti, molle)",kind:"eur",rate:"",qf:900,qu:120,unit:"imp",fac:""},
+  {cat:"Materiali",desc:"Elementi per carri (guide, cunei, perni inclinati)",kind:"eur",rate:"",qf:0,qu:180,unit:"carro",fac:""},
+  {cat:"Lavorazioni",desc:"Sedi tasselli e lavorazioni piastre figura",kind:"h",rate:"fres",qf:8,qu:3,unit:"imp",fac:""},
+  {cat:"Lavorazioni",desc:"Fresatura figure (tasselli)",kind:"h",rate:"hsc",qf:4,qu:8,unit:"imp",fac:"fig"},
+  {cat:"Lavorazioni",desc:"Elettrodi ed erosione a tuffo",kind:"h",rate:"edm",qf:6,qu:7,unit:"imp",fac:"fig"},
+  {cat:"Lavorazioni",desc:"Erosione a filo",kind:"h",rate:"filo",qf:3,qu:3,unit:"imp",fac:"fig"},
+  {cat:"Lavorazioni",desc:"Rettifica",kind:"h",rate:"rett",qf:6,qu:2,unit:"imp",fac:"fig"},
+  {cat:"Lavorazioni",desc:"Circuiti di raffreddamento",kind:"h",rate:"fres",qf:4,qu:1.5,unit:"imp",fac:""},
+  {cat:"Lavorazioni",desc:"Lavorazione carri",kind:"h",rate:"fres",qf:0,qu:14,unit:"carro",fac:"carri"},
+  {cat:"Lavorazioni",desc:"Lavorazione sollevatori",kind:"h",rate:"fres",qf:0,qu:6,unit:"soll",fac:"carri"},
+  {cat:"Lavorazioni",desc:"Lucidatura e finitura figure",kind:"h",rate:"luc",qf:2,qu:5,unit:"imp",fac:"figfin"},
+  {cat:"Lavorazioni",desc:"Banco, montaggio e aggiustaggio",kind:"h",rate:"banco",qf:30,qu:5,unit:"imp",fac:""},
+  {cat:"Lavorazioni",desc:"Aggiustaggio carri",kind:"h",rate:"banco",qf:0,qu:4,unit:"carro",fac:""},
+  {cat:"Trattamenti",desc:"Trattamenti superficiali (nitrurazione, PVD, texture)",kind:"eur",rate:"",qf:0,qu:0,unit:"imp",fac:""},
+  {cat:"Collaudo e documentazione",desc:"Prove stampo e campionatura",kind:"h",rate:"prove",qf:8,qu:0.5,unit:"imp",fac:""},
+  {cat:"Collaudo e documentazione",desc:"Materiale per le prove",kind:"eur",rate:"",qf:150,qu:0,unit:"imp",fac:""},
+  {cat:"Altro",desc:"Imballo e trasporto",kind:"eur",rate:"",qf:400,qu:0,unit:"imp",fac:""}];
+const UNITS = [["imp","per impronta"],["carro","per carro"],["soll","per sollevatore"]];
+const FACS = [["","nessuno"],["fig","acciaio figure"],["figfin","acciaio figure + finitura"],["carri","acciaio carri"]];
+const NOTE0 = "Prezzi in euro, IVA esclusa.\nIl preventivo si basa sui dati e sui modelli 3D forniti dal cliente; eventuali modifiche successive all’ordine saranno quotate a parte.\nLa campionatura comprende solo le prove indicate; prove aggiuntive e modifiche allo stampo non sono incluse.\nIl tempo di consegna decorre dalla conferma d’ordine e dal ricevimento dei dati definitivi.";
+const STEPS = ["Commessa","Componente","Quantità","Processo e ciclo","Pressa","Impronte","Struttura e acciai","Costo stampo","Confronto","Costo pezzo","Preventivo","Salvataggio e note"];
+const OPTYPES = [["pzh","a produttività (pz/h)"],["carica","a carica (forno, lavaggio)"],["pz","a corpo, € per pezzo"],["lotto","a corpo, € per lotto"]];
+const CMODES = [["auto","Automatico"],["semi","Semiautomatico"],["man","Manuale"]];
+
+/* ============================================================ stato */
+let D = null, CUR = 0;
+const clone = o => JSON.parse(JSON.stringify(o));
+function todayISO(){ const d=new Date(); return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0"); }
+function defaults(){
+  const y = new Date().getFullYear();
+  return {
+    app:"preventivo-stampo", v:5,
+    job:{num:y+"-001", date:todayISO(), valid:30, cliente:"", rif:"", referente:"", tipo:"Termoplastico"},
+    part:{desc:"", mat:"ABS", fill:"", fillPct:0, costmat:2.6, vmode:"volume", vol:5, peso:"", L:50, W:35, H:12, classeQ:"tec", lim_q:16, slitte:0, soll:0, fin:"std"},
+    qty:{start:y+1, y:[600000,1000000,1000000,900000,500000], marg_cap:15, scarto:2, gg:220, turni:3, hturno:8, oee:82},
+    proc:{feed:"freddo", runner:20, ciclo:30, fermo_ogni:"", fermo_dur:1, ugello:400, collettore:3000, s:2, t_inj:6, t_mov:6, Tm:"", Tw:"", Te:""},
+    press:{mode:"completa", nome:"Pressa 100 t", cmode:"auto", tariffa:45, t_semi:55, t_man:70, cap:90, dv:30, vcan:"", shot_min:30, shot_max:80, F:100, f_man:7, marg_F:10, col_h:455, col_v:455, hmin:"", hmax:"", cf_mode:"ingombro", cf_L:"", cf_W:"", cf_d:"", cf_A:"", cf_run:10, cf_p:400, cf_F:""},
+    cfg:{nst:1, n:[1,2,4,6,8,12,16,32], ciclo:Array(NCFG).fill(""), ovr:Array(NCFG).fill("")},
+    mold:{classe:"media", vita:1000000, base:"norm", k_norm:4, h_kg:0.06, plate:"1.1730", plateFig:"1.2312", fig:"1.2738", carri:"1.2312",
+          gap:15, m_t:15, fondo:25, pfondo:25, bordo:50, sporg:25, t_fix:27, t_supp:36, sovr:3, carroL:70, carroW:50, carroH:45},
+    lib:clone(LIB0), rates:clone(RATES0), matlib:clone(MATLIB0), fills:clone(FILLS0),
+    cost:{mode:"dettaglio", ext_fisso:15000, ext_imp:3000, prog_hf:40, prog_hc:4, prog_hcar:3, prog_rate:"prog", prog_ovr:"", isir_q:25, isir_pz:3, isir_min:2, cpk_q:0, cpk_pz:50, doc_h:4,
+          imprev:5, margin:25, mtype:"prezzo", basis:"prezzo", rows:clone(ROWS0)},
+    piece:{lotk:5, tmin:16, setup_h:3, setup_rate:50, spurgo:1.5, avv:10, camp_kg:6, camp_h:4,
+           box_L:40, box_W:30, box_H:25, box_fill:75, box_kg:12, box_pz:"", box_eur:1.5, box_extra:0.3,
+           spc_q:0, spc_pz:5, amm:"no", sg:10, margin:20, ops:[],
+           ov_type:"vassoi", ov_L:140, ov_P:72, ov_H:5, ov_n:12, ov_gap:2, ov_V:90, ov_fill:50, ov_kg:100, ov_ore:4, ov_rate:20},
+    quote:{sel:"auto", detail:false, showPiece:true, perf:true, showQty:true, sconto:0, iva:22, weeks:16, acconto:40, saldo:"al benestare dei campioni", note:NOTE0,
+           from:"", fromaddr:"", fromiva:"", fromcontact:""}
+  };
+}
+function isObj(o){ return o && typeof o==="object" && !Array.isArray(o); }
+function merge(base, src){
+  if(!isObj(src)) return base;
+  Object.keys(base).forEach(k=>{
+    if(!(k in src)) return;
+    const b = base[k], s = src[k];
+    if(isObj(b)) base[k] = merge(b, s);
+    else if(Array.isArray(b)){
+      if(!Array.isArray(s)) return;
+      if(k==="y") base[k] = Array.from({length:5},(_,i)=> s[i]!==undefined ? s[i] : "");
+      else if(k==="n"||k==="ciclo"||k==="ovr") base[k] = Array.from({length:NCFG},(_,i)=> s[i]!==undefined ? s[i] : "");
+      else if(k==="ops") base[k] = s.filter(isObj).map(x=>{ const o={desc:"",type:"pzh",a:"",h:"",rate:"",eur:""}; Object.keys(o).forEach(f=>{ if(x[f]!==undefined && typeof x[f]!=="object") o[f]=x[f]; }); return o; });
+      else if(k==="matlib") base[k] = s.filter(isObj).map(x=>{ const o=clone(MATLIB_BLANK); MATF.forEach(f=>{ if(x[f]!==undefined && typeof x[f]!=="object") o[f]=x[f]; }); return o; });
+      else if(k==="fills") base[k] = s.filter(isObj).map(x=>({code:String(x.code||""),name:String(x.name||""),rho:x.rho}));
+      else if(k==="lib") base[k] = s.filter(isObj).map(x=>({code:String(x.code||""),desc:String(x.desc||""),stato:String(x.stato||""),eurkg:x.eurkg,tratt:x.tratt,lav:x.lav}));
+      else if(k==="rates"){ base[k] = b.map(r=>{ const f=s.find(x=>isObj(x)&&x.k===r.k); return f?{k:r.k,l:r.l,v:f.v}:r; }); }
+      else if(k==="rows") base[k] = s.filter(x=>isObj(x)&&VCATS.indexOf(x.cat)>-1).map(x=>Object.assign({cat:"Altro",desc:"",kind:"eur",rate:"",qf:0,qu:0,unit:"imp",fac:""},x));
+    } else if(typeof s!=="object") base[k] = s;
+  });
+  return base;
+}
+function migrate(d){
+  if(isObj(d) && !(d.v>=5) && isObj(d.cost) && Array.isArray(d.cost.rows)) d.cost.rows = d.cost.rows.filter(r=>!(r && r.desc==="Rapporto dimensionale sui campioni"));
+  return d;
+}
+function load(){
+  D = defaults();
+  try{ const raw = localStorage.getItem(KEY); if(raw){ D = merge(defaults(), migrate(JSON.parse(raw))); D.v=5; } }catch(e){}
+  try{ const c = parseInt(localStorage.getItem(KEY+"-step"),10); if(c>=0 && c<STEPS.length) CUR=c; }catch(e){}
+}
+function save(){ try{ localStorage.setItem(KEY, JSON.stringify(D)); }catch(e){} }
+function getP(p){ return p.split(".").reduce((o,k)=> o==null?undefined:o[k], D); }
+function setP(p,v){ const ks=p.split("."); let o=D; for(let i=0;i<ks.length-1;i++) o=o[ks[i]]; o[ks[ks.length-1]]=v; }
+
+/* ============================================================ utilità */
+const nf = d => new Intl.NumberFormat("it-IT",{minimumFractionDigits:d,maximumFractionDigits:d,useGrouping:"always"});
+const FM = {0:nf(0),1:nf(1),2:nf(2),3:nf(3),4:nf(4)};
+const FQ = new Intl.NumberFormat("it-IT",{maximumFractionDigits:1,useGrouping:"always"});
+const EUR = new Intl.NumberFormat("it-IT",{style:"currency",currency:"EUR",useGrouping:"always"});
+const EUR0 = new Intl.NumberFormat("it-IT",{style:"currency",currency:"EUR",maximumFractionDigits:0,useGrouping:"always"});
+function fmt(x,d){ return (typeof x==="number" && isFinite(x)) ? FM[d].format(x) : "–"; }
+function pct(x,d){ return (typeof x==="number" && isFinite(x)) ? FM[d].format(x*100)+"%" : "–"; }
+function eur(x){ return (typeof x==="number" && isFinite(x)) ? EUR.format(x) : "–"; }
+function eur0(x){ return (typeof x==="number" && isFinite(x)) ? EUR0.format(x) : "–"; }
+function num(v){ if(v===""||v===null||v===undefined) return NaN; const x=parseFloat(String(v).replace(",",".")); return isFinite(x)?x:NaN; }
+function n0(v){ const x=num(v); return isFinite(x)?x:0; }
+function pc(p){ return n0(getP(p))/100; }
+function esc(s){ return String(s==null?"":s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c])); }
+function r2(x){ return Math.round(x*100)/100; }
+function dIT(iso){ const m=/^(\d{4})-(\d{2})-(\d{2})$/.exec(iso||""); return m? m[3]+"/"+m[2]+"/"+m[1] : ""; }
+function steel(code){ const s = D.lib.find(x=>x.code===code); return s ? {code:s.code, desc:s.desc, stato:s.stato, eurkg:num(s.eurkg), tratt:n0(s.tratt), lav:isFinite(num(s.lav))&&num(s.lav)>0?num(s.lav):1, ok:true} : {code, desc:"", stato:"", eurkg:NaN, tratt:0, lav:1, ok:false}; }
+function matInfo(){
+  const m = D.matlib.find(x=>x.code===D.part.mat);
+  if(!m) return {ok:false, code:D.part.mat, name:D.part.mat, label:String(D.part.mat||"–"), rho:NaN, rhoM:NaN, F:NaN, perm:NaN, dMin:NaN, dLo:NaN, dHi:NaN, dMax:NaN, a:NaN, Tm:NaN, Tw:NaN, Te:NaN};
+  const o = {ok:true, code:m.code, name:m.name}; MATF.slice(2).forEach(k=>o[k]=num(m[k]));
+  o.rhoMest = false;
+  if(!(o.rhoM>0) && o.rho>0){ o.rhoM = o.rho*0.85; o.rhoMest = true; }
+  const f = D.fills.find(x=>x.code===D.part.fill), w = Math.min(0.9, Math.max(0, n0(D.part.fillPct)/100));
+  o.fill = (f && w>0 && num(f.rho)>0) ? {name:f.name, w, rho:num(f.rho)} : null;
+  if(o.fill){ o.rho = 1/((1-w)/o.rho + w/o.fill.rho); o.rhoM = 1/((1-w)/o.rhoM + w/o.fill.rho); }
+  o.label = (o.name ? o.code+" – "+o.name : o.code) + (o.fill ? " + "+fmt(w*100,0)+"% "+o.fill.name.toLowerCase() : "");
+  return o;
+}
+function rate(k){ const r = D.rates.find(x=>x.k===k); return r ? n0(r.v) : 0; }
+function lbl(list,k){ const f=list.find(x=>x[0]===k); return f?f[1]:k; }
+
+/* ============================================================ campi */
+const FIELDS = [], ROS = [];
+function fillOpts(el, def){
+  const opts = typeof def.opts==="function" ? def.opts() : def.opts;
+  const cur = String(getP(def.p));
+  el.innerHTML = ""; let found = false;
+  opts.forEach(([v,l])=>{ const o=document.createElement("option"); o.value=v; o.textContent=l; el.appendChild(o); if(String(v)===cur) found=true; });
+  if(!found && cur!==""){ const o=document.createElement("option"); o.value=cur; o.textContent=cur+" (non in libreria)"; el.appendChild(o); }
+  el.value = cur;
+}
+function setEl(el, def){ const v=getP(def.p); if(def.type==="check") el.checked=!!v; else if(def.type==="select") fillOpts(el,def); else el.value=(v==null?"":v); }
+function renderFields(hostId, defs){
+  const host = $(hostId);
+  defs.forEach(def=>{
+    if(def.head){ const h=document.createElement("h3"); h.className="sub-h"; h.textContent=def.head; h.style.gridColumn="1 / -1"; host.appendChild(h); FIELDS.push({def,row:h}); return; }
+    if(def.btn){ const row=document.createElement("div"); row.className="field"; row.appendChild(document.createElement("span"));
+      const b=document.createElement("button"); b.type="button"; b.className="primary"; b.textContent=def.btn;
+      b.addEventListener("click",()=>{ def.on(); save(); syncFields(); update(); });
+      row.appendChild(b); host.appendChild(row); FIELDS.push({def,row}); return; }
+    if(def.ro){ const row=document.createElement("div"); row.className="calc"+(def.b?" b":"");
+      row.innerHTML='<span></span><span class="v"><span></span> <span class="unit"></span></span>'+(def.note?'<div class="note"></div>':'');
+      row.children[0].textContent=def.label; row.querySelector(".unit").textContent=def.unit||"";
+      if(def.note) row.querySelector(".note").textContent=def.note;
+      host.appendChild(row); ROS.push({el:row.querySelector(".v span"), fn:def.ro}); FIELDS.push({def,row}); return; }
+    const type = def.type||"number";
+    def.type = type;
+    const row=document.createElement("div"); row.className="field"+(def.stack?" stack":"")+(type==="select"&&!def.stack?" sel":"");
+    const lab=document.createElement("label"); lab.textContent=def.label;
+    const wrap=document.createElement("div"); wrap.className="inwrap";
+    let el, ev="input";
+    if(type==="select"){ el=document.createElement("select"); ev="change"; }
+    else if(type==="textarea"){ el=document.createElement("textarea"); el.rows=def.rows||6; }
+    else if(type==="check"){ el=document.createElement("input"); el.type="checkbox"; ev="change"; }
+    else { el=document.createElement("input"); el.type=type; if(type==="number"){ el.inputMode="decimal"; el.step=def.step||"any"; el.min=0; } if(def.ph) el.placeholder=def.ph; }
+    el.id = "f_"+def.p.replace(/\./g,"_"); lab.htmlFor = el.id;
+    setEl(el, def);
+    el.addEventListener(ev, ()=>{
+      setP(def.p, type==="check" ? el.checked : el.value);
+      if(def.on) def.on(getP(def.p));
+      save(); syncFields(el); update();
+    });
+    wrap.appendChild(el);
+    if(def.unit){ const u=document.createElement("span"); u.className="unit"; u.textContent=def.unit; wrap.appendChild(u); }
+    row.appendChild(lab); row.appendChild(wrap);
+    if(def.note){ const n=document.createElement("div"); n.className="note"; n.textContent=def.note; row.appendChild(n); }
+    host.appendChild(row);
+    FIELDS.push({def,row,el});
+  });
+}
+function syncFields(skip){ FIELDS.forEach(f=>{ if(!f.el || f.el===skip || f.el===document.activeElement) return; setEl(f.el,f.def); }); }
+const show = fn => fn;
+
+const steelOpts = ()=> D.lib.map(s=>[s.code, s.code+" – "+s.stato]);
+const F1 = [
+  {p:"job.tipo",label:"Processo",type:"select",opts:[["Termoplastico","Termoplastico"],["LSR","LSR (silicone liquido)"]],
+   on:v=>{ if(v==="LSR"){ D.proc.feed="colddeck"; D.proc.runner=3; if(D.part.mat!=="LSR"){ D.part.mat="LSR"; D.part.fill=""; const m=D.matlib.find(x=>x.code==="LSR"); if(m && isFinite(num(m.cost))) D.part.costmat=m.cost; } }
+           else if(D.proc.feed==="colddeck"){ D.proc.feed="freddo"; D.proc.runner=20; } }, note:"LSR imposta cold deck e materiale LSR (modificabili)."},
+  {p:"job.num",label:"Numero preventivo",type:"text"},
+  {p:"job.date",label:"Data",type:"date"},
+  {p:"job.valid",label:"Validità dell’offerta",unit:"giorni",step:1},
+  {p:"job.cliente",label:"Cliente",type:"text",stack:true,ph:"Ragione sociale e indirizzo"},
+  {p:"job.referente",label:"Alla cortese attenzione di",type:"text",stack:true},
+  {p:"job.rif",label:"Riferimento / n° disegno",type:"text",stack:true}
+];
+const F2 = [
+  {head:"Pezzo e materiale"},
+  {p:"part.desc",label:"Descrizione del pezzo",type:"text",stack:true,ph:"Es. Coperchio connettore"},
+  {p:"part.mat",label:"Materiale base",type:"select",opts:()=>D.matlib.map(m=>[m.code,m.code+(m.name?" – "+m.name:"")]),
+   on:v=>{ const m=D.matlib.find(x=>x.code===v); if(m && isFinite(num(m.cost))) D.part.costmat=m.cost; }, note:"Dalla libreria materiali in fondo a questo step; propone il costo al kg."},
+  {p:"part.fill",label:"Carica",type:"select",opts:()=>[["","Nessuna"]].concat(D.fills.map(f=>[f.code,f.name]))},
+  {p:"part.fillPct",label:"Contenuto di carica",unit:"% peso",step:5,show:()=>!!D.part.fill},
+  {p:"part.costmat",label:"Costo del materiale (compound)",unit:"€/kg",step:.1},
+  {ro:R=>fmt(R.mat.rho,3)+" / "+fmt(R.mat.rhoM,3)+(R.mat.rhoMest?" (fuso stimato)":""),label:"Densità solida / del fuso",unit:"g/cm³",note:"Con carica: regola delle miscele"},
+  {p:"part.vmode",label:"Dato disponibile",type:"select",opts:[["volume","Volume del pezzo"],["peso","Peso del pezzo"]]},
+  {p:"part.vol",label:"Volume del pezzo",unit:"cm³",step:.1,show:()=>D.part.vmode==="volume"},
+  {p:"part.peso",label:"Peso del pezzo",unit:"g",step:.1,show:()=>D.part.vmode==="peso"},
+  {ro:R=> D.part.vmode==="volume" ? fmt(R.peso,2)+" g" : fmt(R.vol,2)+" cm³", label:"Valore calcolato dalla densità", note:"Peso se hai inserito il volume, volume se hai inserito il peso"},
+  {head:"Ingombro del pezzo (scatola che lo contiene)"},
+  {p:"part.L",label:"Lunghezza",unit:"mm",step:1},
+  {p:"part.W",label:"Larghezza",unit:"mm",step:1},
+  {p:"part.H",label:"Altezza (in direzione di apertura)",unit:"mm",step:1},
+  {head:"Qualità e complessità"},
+  {p:"part.classeQ",label:"Classe di qualità",type:"select",opts:CLASSI_Q.map(c=>[c[0],c[1]]),
+   on:v=>{ const c=CLASSI_Q.find(x=>x[0]===v); if(c) D.part.lim_q=c[2]; }, note:"Propone il numero massimo di impronte, modificabile sotto."},
+  {p:"part.lim_q",label:"Limite impronte per qualità",unit:"n",step:1},
+  {p:"part.slitte",label:"Carri / slitte per impronta",unit:"n",step:1,note:"Sottosquadri laterali"},
+  {p:"part.soll",label:"Sollevatori per impronta",unit:"n",step:1,note:"Sottosquadri interni"},
+  {p:"part.fin",label:"Finitura delle figure",type:"select",opts:FINITURE.map(f=>[f[0],f[1]]),note:"Moltiplica le ore di lucidatura"}
+];
+const F3 = [
+  {p:"qty.marg_cap",label:"Margine di capacità richiesto",unit:"%",step:1,note:"Riserva sulla domanda dell’anno di picco (consigliato 15-20%)"},
+  {p:"qty.scarto",label:"Scarto di qualità previsto",unit:"%",step:.5},
+  {p:"qty.gg",label:"Giorni lavorativi per anno",unit:"gg",step:1},
+  {p:"qty.turni",label:"Turni per giorno",unit:"n",step:1},
+  {p:"qty.hturno",label:"Ore per turno",unit:"h",step:.5},
+  {p:"qty.oee",label:"OEE (efficienza impianto)",unit:"%",step:1,note:"Tipico 75-85%"},
+  {ro:R=>fmt(R.ore,0),label:"Ore produttive per anno",unit:"h"},
+  {ro:R=>fmt(R.Qmax,0),label:"Anno di picco",unit:"pz",b:true},
+  {ro:R=>fmt(R.Qtot,0),label:"Totale programma",unit:"pz",b:true},
+  {ro:R=>fmt(R.pzh_m,1),label:"Pezzi/ora richiesti nel picco, con margine",unit:"pz/h"}
+];
+const F4 = [
+  {p:"proc.feed",label:"Alimentazione",type:"select",opts:FEEDS.map(f=>[f[0],f[1]]),
+   on:v=>{ const f=FEEDS.find(x=>x[0]===v); if(f) D.proc.runner=f[2]; }, note:"Imposta il volume dei canali e attiva le voci degli ugelli"},
+  {p:"proc.runner",label:"Volume canali / materozza",unit:"%",step:1,note:"% del volume pezzo. Canale freddo 10-30%; caldo 0%; cold deck 0-5%"},
+  {p:"proc.ciclo",label:"Tempo ciclo stimato",unit:"s",step:.5,note:"Raffreddamento (reticolazione per LSR) + movimenti"},
+  {p:"proc.ugello",label:"Prezzo per ugello",unit:"€/pz",step:10,show:()=>D.proc.feed!=="freddo",note:"Ipotesi da sostituire con offerta"},
+  {p:"proc.collettore",label:"Collettore / distributore (se più impronte)",unit:"€",step:100,show:()=>D.proc.feed!=="freddo",note:"Ipotesi da sostituire con offerta"},
+  {p:"proc.fermo_ogni",label:"Fermo programmato ogni",unit:"h",step:1,ph:"nessuno",note:"Pulizia stampo, manutenzione: ore di produzione tra un fermo e l’altro"},
+  {p:"proc.fermo_dur",label:"Durata del fermo",unit:"h",step:.5,show:()=>num(D.proc.fermo_ogni)>0},
+  {ro:R=>pct(R.effF,1),label:"Efficienza per fermi programmati",note:"Riduce pezzi/ora e capacità di tutte le configurazioni"},
+  {ro:R=>fmt(R.cicli,1),label:"Cicli all’ora",unit:"cicli/h"},
+  {ro:R=>fmt(R.shotW,2),label:"Peso iniettato per impronta (pezzo + canali)",unit:"g"},
+  {ro:R=>fmt(R.v_cav,2),label:"Volume di fuso per impronta (pezzo + canali)",unit:"cm³",note:"Peso ÷ densità del fuso"}
+];
+const isFull = ()=> D.press.mode==="completa";
+const F5 = [
+  {p:"press.mode",label:"Modalità",type:"select",opts:[["occhio","Pressa a occhio (solo costo orario)"],["completa","Verifica completa"]]},
+  {p:"press.nome",label:"Nome / taglia della pressa",type:"text",ph:"Es. Pressa 100 t"},
+  {p:"press.cmode",label:"Modalità di lavoro",type:"select",opts:CMODES,note:"Sceglie quale tariffa pressa + operatore usare"},
+  {p:"press.tariffa",label:"Tariffa pressa + operatore – automatico",unit:"€/h",step:1,note:"Operatore condiviso tra più presse"},
+  {p:"press.t_semi",label:"Tariffa pressa + operatore – semiautomatico",unit:"€/h",step:1},
+  {p:"press.t_man",label:"Tariffa pressa + operatore – manuale",unit:"€/h",step:1,note:"Operatore dedicato alla pressa"},
+  {ro:R=>isFinite(R.tariffa)?fmt(R.tariffa,2)+" €/h":"–",label:"Tariffa usata",b:true},
+  {p:"press.cap",label:"Capacità di iniezione (volume vite)",unit:"cm³",step:5,note:"Facoltativa a occhio. Per LSR: volume del dosatore"},
+  {p:"press.dv",label:"Diametro vite",unit:"mm",step:1,note:"Facoltativo: serve per la corsa di dosaggio in D"},
+  {p:"press.vcan",label:"Volume dei canali della vite",unit:"cm³",step:5,ph:"stima",note:"Facoltativo, per il tempo di permanenza. Vuoto = stima 1,85 × capacità di iniezione (da confermare)"},
+  {ro:R=>(R.hasDv && R.cap>0)?fmt(R.cap/R.volD,1)+" D":"–",label:"Corsa massima della vite (dalla capacità)",note:"Capacità ÷ sezione della vite: di norma 3-5 D. Un valore fuori scala indica un dato sbagliato"},
+  {ro:R=>R.vcan>0?fmt(R.vcan,0)+" cm³"+(R.vcanEst?" (stimato)":""):"–",label:"Volume dei canali usato"},
+  {p:"press.shot_min",label:"Utilizzo minimo capacità di iniezione",unit:"%",step:1},
+  {p:"press.shot_max",label:"Utilizzo massimo capacità di iniezione",unit:"%",step:1},
+  {p:"press.F",label:"Forza di chiusura",unit:"t",step:5,show:isFull},
+  {p:"press.f_man",label:"Forza di chiusura necessaria per impronta",unit:"t",step:.1,show:isFull,note:"Facoltativa: da esperienza, dal fornitore o con l’aiuto di calcolo qui sotto. Vuoto = chiusura non verificata"},
+  {p:"press.marg_F",label:"Margine di sicurezza sulla chiusura",unit:"%",step:1,show:isFull},
+  {p:"press.col_h",label:"Passaggio colonne orizzontale",unit:"mm",step:5,show:isFull},
+  {p:"press.col_v",label:"Passaggio colonne verticale",unit:"mm",step:5,show:isFull},
+  {p:"press.hmin",label:"Altezza stampo minima",unit:"mm",step:5,show:isFull,note:"Facoltativa"},
+  {p:"press.hmax",label:"Altezza stampo massima",unit:"mm",step:5,show:isFull,note:"Facoltativa"}
+];
+const F4B = [
+  {p:"proc.s",label:"Spessore di parete prevalente",unit:"mm",step:.1},
+  {p:"proc.Tm",label:"Temperatura del fuso",unit:"°C",step:5,ph:"libreria"},
+  {p:"proc.Tw",label:"Temperatura dello stampo",unit:"°C",step:5,ph:"libreria"},
+  {p:"proc.Te",label:"Temperatura di estrazione",unit:"°C",step:5,ph:"libreria"},
+  {p:"proc.t_inj",label:"Iniezione e mantenimento",unit:"s",step:.5},
+  {p:"proc.t_mov",label:"Apertura, estrazione e chiusura",unit:"s",step:.5},
+  {ro:R=>R.cool.ok?fmt(R.cool.Tm,0)+" / "+fmt(R.cool.Tw,0)+" / "+fmt(R.cool.Te,0)+" °C · a "+fmt(R.cool.a,3)+" mm²/s":"–",label:"Valori usati (fuso / stampo / estrazione)"},
+  {ro:R=>R.cool.ok?fmt(R.cool.t,1):"n/d",label:"Tempo di raffreddamento stimato",unit:"s"},
+  {ro:R=>R.cool.ok?fmt(R.cool.ciclo,1):"n/d",label:"Tempo ciclo stimato",unit:"s",b:true},
+  {btn:"Usa come tempo ciclo",on:()=>{ if(LAST && LAST.cool.ok) D.proc.ciclo = Math.round(LAST.cool.ciclo*10)/10; }}
+];
+const F5B = [
+  {p:"press.cf_mode",label:"Superficie proiettata del pezzo",type:"select",opts:[["ingombro","Dall’ingombro del pezzo (L × W, per eccesso)"],["rett","Rettangolo"],["cerchio","Cerchio"],["area","Area inserita"]]},
+  {p:"press.cf_L",label:"Lunghezza",unit:"mm",step:1,show:()=>D.press.cf_mode==="rett"},
+  {p:"press.cf_W",label:"Larghezza",unit:"mm",step:1,show:()=>D.press.cf_mode==="rett"},
+  {p:"press.cf_d",label:"Diametro",unit:"mm",step:1,show:()=>D.press.cf_mode==="cerchio"},
+  {p:"press.cf_A",label:"Area",unit:"cm²",step:.5,show:()=>D.press.cf_mode==="area"},
+  {p:"press.cf_run",label:"Area dei canali",unit:"% pezzo",step:1,note:"0 con canale caldo o cold deck"},
+  {p:"press.cf_p",label:"Pressione in cavità",unit:"bar",step:10,note:"Indicativa 300-500 bar per pareti normali e percorsi brevi, 800-1200 bar per pareti sottili o percorsi lunghi"},
+  {p:"press.cf_F",label:"Fattore materiale",step:.05,ph:"libreria",note:"Vuoto = valore della libreria materiali"},
+  {ro:R=>fmt(R.cf.A,1)+" cm²",label:"Area proiettata per impronta (con canali)"},
+  {ro:R=>fmt(R.cf.F,2),label:"Fattore materiale usato"},
+  {ro:R=>fmt(R.cf.t,2)+" t",label:"Forza di chiusura per impronta",b:true},
+  {btn:"Usa questo valore",on:()=>{ if(LAST && LAST.cf.t>0) D.press.f_man = Math.round(LAST.cf.t*100)/100; }}
+];
+const F6N = [
+  {p:"cfg.nst",label:"Stampi in parallelo (uno per pressa)",unit:"n",step:1,note:"Più stampi uguali su presse uguali: capacità e costo dello stampo si moltiplicano, la progettazione si paga una volta"}
+];
+const F8Q = [
+  {p:"cost.isir_q",label:"Quote da rilevare (ISIR)",unit:"n",step:1},
+  {p:"cost.isir_pz",label:"Pezzi per impronta",unit:"n",step:1},
+  {p:"cost.isir_min",label:"Minuti per quota",unit:"min",step:.5,note:"Usati anche per i controlli SPC per lotto"},
+  {p:"cost.cpk_q",label:"Quote per studio Cp/Cpk",unit:"n",step:1,note:"0 = non richiesto"},
+  {p:"cost.cpk_pz",label:"Pezzi per studio Cp/Cpk",unit:"n",step:5,show:()=>n0(D.cost.cpk_q)>0},
+  {p:"cost.doc_h",label:"Documentazione (PPAP, rapporti)",unit:"h",step:.5},
+  {ro:R=>R.sel? FQ.format(R.sel.m.qh)+" h · "+eur(R.sel.m.qAmt):"–",label:"Collaudo – configurazione quotata",b:true}
+];
+const G10A = [
+  {p:"piece.lotk",label:"Lotto minimo: frazione del fabbisogno annuo",unit:"1/n",step:1,note:"Es. 5 = ogni lotto almeno 1/5 del fabbisogno dell’anno"},
+  {p:"piece.tmin",label:"Durata minima di un lotto",unit:"h",step:1},
+  {p:"piece.setup_h",label:"Allestimento per lotto (cambio stampo e avviamento)",unit:"h",step:.5},
+  {p:"piece.setup_rate",label:"Tariffa allestimento",unit:"€/h",step:1,note:"Attrezzista e pressa ferma"},
+  {p:"piece.spurgo",label:"Spurgo a ogni avviamento",unit:"kg",step:.5},
+  {p:"piece.avv",label:"Stampate scartate all’avviamento",unit:"n",step:1},
+  {ro:R=>R.pc&&R.pc.peak? fmt(R.pc.peak.lot,0)+" pz · "+fmt(R.pc.peak.lots,0)+" lotti/anno":"–",label:"Lotto nell’anno di picco"},
+  {ro:R=>R.pc? eur(R.pc.setupLot):"–",label:"Costo di allestimento e avviamento per lotto",note:"Per tutti gli stampi in parallelo"},
+  {p:"piece.camp_kg",label:"Campionatura minima: peso netto",unit:"kg",step:1},
+  {p:"piece.camp_h",label:"Campionatura minima: ore di produzione",unit:"h",step:.5},
+  {ro:R=>R.pc? fmt(R.pc.camp,0)+" pz":"–",label:"Quantità minima di campionatura",note:"Il maggiore tra peso netto e ore di produzione di uno stampo"}
+];
+const G10OV = [
+  {p:"piece.ov_type",label:"Tipo di forno",type:"select",opts:[["vassoi","A vassoi (pezzi disposti)"],["rot","Rotativo o a cestello (pezzi sfusi)"]]},
+  {p:"piece.ov_L",label:"Vassoio: lunghezza",unit:"cm",step:1,show:()=>D.piece.ov_type==="vassoi"},
+  {p:"piece.ov_P",label:"Vassoio: profondità",unit:"cm",step:1,show:()=>D.piece.ov_type==="vassoi"},
+  {p:"piece.ov_H",label:"Altezza utile per vassoio",unit:"cm",step:.5,show:()=>D.piece.ov_type==="vassoi"},
+  {p:"piece.ov_n",label:"Numero di vassoi",unit:"n",step:1,show:()=>D.piece.ov_type==="vassoi"},
+  {p:"piece.ov_gap",label:"Distanza tra i pezzi",unit:"mm",step:1,show:()=>D.piece.ov_type==="vassoi"},
+  {p:"piece.ov_V",label:"Volume utile",unit:"dm³",step:5,show:()=>D.piece.ov_type==="rot"},
+  {p:"piece.ov_fill",label:"Riempimento con pezzi sfusi",unit:"%",step:5,show:()=>D.piece.ov_type==="rot",note:"Quota del volume occupata davvero dal materiale"},
+  {p:"piece.ov_kg",label:"Carico massimo",unit:"kg",step:5,show:()=>D.piece.ov_type==="rot"},
+  {p:"piece.ov_ore",label:"Durata della carica",unit:"h",step:.5,note:"Riscaldamento + mantenimento + raffreddamento"},
+  {p:"piece.ov_rate",label:"Tariffa forno",unit:"€/h",step:1},
+  {ro:R=>R.ov.ok? fmt(R.ov.n,0)+" pz"+(R.ov.det?" ("+R.ov.det+")":""):"servono le dimensioni del pezzo (step 2)",label:"Pezzi per carica",b:true},
+  {btn:"Aggiungi come riga forno",on:()=>{ if(LAST && LAST.ov.ok){ D.piece.ops.push({desc:"Forno "+(D.piece.ov_type==="rot"?"rotativo":"a vassoi"),type:"carica",a:LAST.ov.n,h:D.piece.ov_ore,rate:D.piece.ov_rate,eur:""}); buildOps(); } }}
+];
+const G10B = [
+  {p:"piece.box_L",label:"Scatola: lunghezza",unit:"cm",step:1},
+  {p:"piece.box_W",label:"Scatola: larghezza",unit:"cm",step:1},
+  {p:"piece.box_H",label:"Scatola: altezza",unit:"cm",step:1},
+  {p:"piece.box_fill",label:"Riempimento utile",unit:"%",step:5,note:"Sul rapporto tra volume della scatola e ingombro del pezzo"},
+  {p:"piece.box_kg",label:"Peso massimo per scatola",unit:"kg",step:1},
+  {p:"piece.box_pz",label:"Oppure pezzi per scatola",unit:"pz",step:10,ph:"calcolo",note:"Se compilato sostituisce il calcolo"},
+  {p:"piece.box_eur",label:"Costo scatola",unit:"€",step:.1},
+  {p:"piece.box_extra",label:"Sacchetti, separatori, etichette per scatola",unit:"€",step:.1},
+  {ro:R=>R.pc? (isFinite(R.pc.byVol)?fmt(R.pc.byVol,0):"–")+" / "+(isFinite(R.pc.byKg)?fmt(R.pc.byKg,0):"–"):"–",label:"Pezzi per scatola: per volume / per peso"},
+  {ro:R=>R.pc&&R.pc.pcsBox>0? fmt(R.pc.pcsBox,0)+" pz · "+fmt(R.pc.boxKg,1)+" kg":"imballo non definito",label:"Pezzi e peso per scatola",b:true},
+  {ro:R=>R.pc? fmt(R.pc.avg.box,4)+" €/pz":"–",label:"Costo d’imballo per pezzo"}
+];
+const G10Q = [
+  {p:"piece.spc_q",label:"Quote rilevate per lotto (SPC)",unit:"n",step:1,note:"0 = nessun controllo per lotto"},
+  {p:"piece.spc_pz",label:"Pezzi rilevati per lotto",unit:"n",step:1,show:()=>n0(D.piece.spc_q)>0},
+  {ro:R=>R.pc? FQ.format(R.pc.spcH)+" h · "+eur(R.pc.spcLot):"–",label:"Controlli per lotto"}
+];
+const G10C = [
+  {p:"piece.amm",label:"Ammortamento stampo nel prezzo del pezzo",type:"select",opts:[["no","No: stampo fatturato a parte"],["si","Sì: stampo a tuo carico, sul programma"]]},
+  {p:"piece.sg",label:"Spese generali",unit:"%",step:1,note:"Sul costo del pezzo"},
+  {p:"piece.margin",label:"Margine sul prezzo del pezzo",unit:"%",step:1}
+];
+const RO6 = [
+  {ro:R=>fmt(R.n_dom,0),label:"Impronte minime per l’anno di picco",b:true,note:"Con margine di capacità e scarto"},
+  {ro:R=>R.hasCap?fmt(R.n_shot_min,0)+" – "+fmt(R.n_shot_max,0):"non verificato",label:"Impronte per capacità di iniezione (min – max)"},
+  {ro:R=>R.hasD?(fmt(R.n_D_min,0)+" – "+fmt(R.n_D_max,0)+" (ottimo "+fmt(R.n_D_lo,0)+" – "+(isFinite(R.n_D_hi)?fmt(R.n_D_hi,0):"–")+")"):"non verificato",label:"Impronte per corsa di dosaggio (min – max)"},
+  {ro:R=>R.hasPerm?"almeno "+fmt(R.n_P_min,0):"non verificato",label:"Impronte minime per tempo di permanenza"},
+  {ro:R=>R.hasF?fmt(R.n_F_max,0):"non verificato",label:"Impronte massime per forza di chiusura"},
+  {ro:R=>fmt(R.lim_q,0),label:"Limite per qualità/tolleranze"},
+  {ro:R=>fmt(R.n_max,0),label:"Impronte massime ammissibili",b:true},
+  {ro:R=>fmt(R.n_low,0),label:"Impronte minime consigliate",b:true}
+];
+const F7A = [
+  {p:"mold.classe",label:"Classe dello stampo",type:"select",opts:CLASSI_S.map(c=>[c.k,c.label]),
+   on:v=>{ const c=CLASSI_S.find(x=>x.k===v); if(c){ D.mold.vita=c.vita; D.mold.plate=c.plate; D.mold.plateFig=c.plateFig; D.mold.fig=c.fig; D.mold.carri=c.carri; } },
+   note:"Propone vita e acciai; i valori sono indicativi"},
+  {p:"mold.vita",label:"Vita prevista dello stampo",unit:"cicli",step:10000},
+  {p:"mold.base",label:"Portastampo",type:"select",opts:[["norm","Normalizzato (da catalogo)"],["costr","Costruito in officina"]]},
+  {p:"mold.k_norm",label:"Sovrapprezzo lavorazione normalizzato",unit:"€/kg",step:.5,show:()=>D.mold.base==="norm",note:"Si somma al prezzo dell’acciaio: copre squadratura, rettifica e forature standard (ipotesi)"},
+  {p:"mold.h_kg",label:"Ore di lavorazione piastre costruite",unit:"h/kg",step:.01,show:()=>D.mold.base==="costr",note:"Moltiplicate per la lavorabilità dell’acciaio, a tariffa fresatura 3 assi"},
+  {p:"mold.plate",label:"Acciaio piastre portastampo e castello",type:"select",opts:steelOpts},
+  {p:"mold.plateFig",label:"Acciaio piastre figura (porta-tasselli)",type:"select",opts:steelOpts},
+  {p:"mold.fig",label:"Acciaio tasselli figura (matrici e punzoni)",type:"select",opts:steelOpts},
+  {p:"mold.carri",label:"Acciaio carri e sollevatori",type:"select",opts:steelOpts}
+];
+const F7B = [
+  {p:"mold.m_t",label:"Spalla del tassello attorno alla figura",unit:"mm",step:1},
+  {p:"mold.fondo",label:"Fondo del tassello sotto la figura",unit:"mm",step:1},
+  {p:"mold.gap",label:"Distanza tra i tasselli",unit:"mm",step:1},
+  {p:"mold.bordo",label:"Bordo piastra attorno ai tasselli",unit:"mm",step:1,note:"Spazio per guide, viti e raffreddamento"},
+  {p:"mold.pfondo",label:"Fondo piastra sotto il tassello",unit:"mm",step:1},
+  {p:"mold.t_fix",label:"Spessore piastre di fissaggio",unit:"mm",step:1},
+  {p:"mold.sporg",label:"Sporgenza piastre di fissaggio per lato",unit:"mm",step:1},
+  {p:"mold.t_supp",label:"Spessore piastra di supporto",unit:"mm",step:1},
+  {p:"mold.sovr",label:"Sovrametallo del grezzo per lato",unit:"mm",step:.5},
+  {p:"mold.carroL",label:"Carro: lunghezza (e spazio extra per lato)",unit:"mm",step:1,show:()=>n0(D.part.slitte)>0},
+  {p:"mold.carroW",label:"Carro: larghezza",unit:"mm",step:1,show:()=>n0(D.part.slitte)>0},
+  {p:"mold.carroH",label:"Carro: altezza",unit:"mm",step:1,show:()=>n0(D.part.slitte)>0}
+];
+const isUnica = ()=> D.cost.mode==="unica";
+const F8A = [
+  {p:"cost.mode",label:"Costo dello stampo",type:"select",opts:[["dettaglio","Dettaglio (acciai, lavorazioni, voci)"],["unica","Voce unica (fornitore esterno)"]]},
+  {p:"cost.imprev",label:"Imprevisti",unit:"%",step:.5,note:"Sul costo stimato (dettaglio e progettazione); non sul prezzo di un fornitore esterno"},
+  {p:"cost.margin",label:"Margine / ricarico",unit:"%",step:.5},
+  {p:"cost.mtype",label:"Il margine è calcolato su",type:"select",opts:[["prezzo","prezzo di vendita"],["costo","costo (ricarico)"]],note:"Margine 25% sul prezzo = ricarico 33,3% sul costo"},
+  {p:"cost.basis",label:"Valore stampo usato nel confronto",type:"select",opts:[["prezzo","prezzo di vendita (stampo pagato dal cliente)"],["costo","costo (stampo a tuo carico)"]]}
+];
+const F8EXT = [
+  {p:"cost.ext_fisso",label:"Stima: quota fissa",unit:"€",step:500},
+  {p:"cost.ext_imp",label:"Stima: quota per impronta",unit:"€",step:100}
+];
+const F8P = [
+  {p:"cost.prog_hf",label:"Ore fisse",unit:"h",step:1},
+  {p:"cost.prog_hc",label:"Ore per impronta",unit:"h",step:.5},
+  {p:"cost.prog_hcar",label:"Ore per carro / slitta",unit:"h",step:.5},
+  {p:"cost.prog_rate",label:"Tariffa",type:"select",opts:()=>D.rates.map(r=>[r.k,r.l+" ("+fmt(n0(r.v),0)+" €/h)"])},
+  {p:"cost.prog_ovr",label:"Oppure importo a corpo",unit:"€",step:100,note:"Se compilato sostituisce il calcolo a ore (es. progettazione esterna)"},
+  {ro:R=>R.sel?eur(R.sel.m.prog):"–",label:"Progettazione – configurazione quotata",b:true}
+];
+const F10A = [
+  {p:"quote.perf",label:"Mostra prestazioni attese",type:"check"},
+  {p:"quote.showQty",label:"Mostra quantità per anno",type:"check"},
+  {p:"quote.detail",label:"Mostra il dettaglio delle voci",type:"check"},
+  {p:"quote.showPiece",label:"Mostra il prezzo del pezzo",type:"check"},
+  {p:"quote.sconto",label:"Sconto al cliente",unit:"%",step:.5},
+  {p:"quote.iva",label:"Aliquota IVA",unit:"%",step:1,note:"Verifica l’aliquota applicabile"}
+];
+const F10B = [
+  {p:"quote.weeks",label:"Consegna stampo",unit:"settimane",step:1},
+  {p:"quote.acconto",label:"Acconto all’ordine",unit:"%",step:5},
+  {p:"quote.saldo",label:"Saldo",type:"text",stack:true,note:"Es. al benestare dei campioni · a 30 gg data fattura"},
+  {p:"quote.note",label:"Note e condizioni (modello da adattare)",type:"textarea",stack:true,rows:7}
+];
+const F10C = [
+  {p:"quote.from",label:"Ragione sociale",type:"text",stack:true},
+  {p:"quote.fromaddr",label:"Indirizzo",type:"text",stack:true},
+  {p:"quote.fromiva",label:"Partita IVA / C.F.",type:"text",stack:true},
+  {p:"quote.fromcontact",label:"Contatti (telefono, email)",type:"text",stack:true}
+];
+
+/* ============================================================ geometria */
+function geom(n, P){
+  const M = D.mold, L=P.L, W=P.W, H=P.H;
+  const cols = Math.ceil(Math.sqrt(n)), rows = Math.ceil(n/cols);
+  const mt=n0(M.m_t), fondo=n0(M.fondo), gap=n0(M.gap), bordo=n0(M.bordo), pf=n0(M.pfondo);
+  const tfix=n0(M.t_fix), sp=n0(M.sporg), tsup=n0(M.t_supp), s=n0(M.sovr);
+  const sl=n0(D.part.slitte), so=n0(D.part.soll);
+  const cL=n0(M.carroL), cW=n0(M.carroW), cH=n0(M.carroH);
+  const Lt=L+2*mt, Wt=W+2*mt, ht=H/2+fondo;
+  const X = cols*Lt + (cols-1)*gap + 2*bordo + (sl>0 ? 2*cL : 0);
+  const Y = rows*Wt + (rows-1)*gap + 2*bordo;
+  const corsa = Math.max(H/2+15, 25), te1=15, te2=20, hc = corsa+te1+te2+5;
+  const wc = Math.max(40, Math.round(0.12*X));
+  const tA = ht+pf;
+  const parts = [];
+  const P_ = (grp,name,q,a,b,c)=>{ if(q>0 && a>0 && b>0 && c>0) parts.push({grp,name,q,a,b,c,kg:q*(a+2*s)*(b+2*s)*(c+2*s)*RHO}); };
+  P_("base","Piastra di fissaggio lato fisso",1,X+2*sp,Y,tfix);
+  P_("fig_plate","Piastra porta-matrici",1,X,Y,tA);
+  P_("fig_plate","Piastra porta-punzoni",1,X,Y,tA);
+  P_("base","Piastra di supporto",1,X,Y,tsup);
+  P_("base","Distanziali (castello)",2,wc,Y,hc);
+  P_("base","Piastra porta-estrattori",1,X-2*wc-10,Y-20,te1);
+  P_("base","Piastra di spinta estrattori",1,X-2*wc-10,Y-20,te2);
+  P_("base","Piastra di fissaggio lato mobile",1,X+2*sp,Y,tfix);
+  P_("fig","Tasselli matrice",n,Lt,Wt,ht);
+  P_("fig","Tasselli punzone",n,Lt,Wt,ht);
+  P_("carri","Carri / slitte",n*sl,cL,cW,cH);
+  P_("carri","Sollevatori",n*so,25,15,ht+hc+20);
+  const kg = {base:0,fig_plate:0,fig:0,carri:0}; parts.forEach(p=>kg[p.grp]+=p.kg);
+  return {cols,rows,Lt,Wt,ht,X,Y,Wm:X+2*sp,Hm:Y,T:2*tfix+2*tA+tsup+hc,parts,kg,kgTot:kg.base+kg.fig_plate+kg.fig+kg.carri,sl,so,cL,cW,gap,bordo};
+}
+
+/* ============================================================ costi */
+function moldCost(n, geo, ci){
+  const M=D.mold, Cc=D.cost;
+  const lines=[]; const add=(cat,desc,amt,qt)=>lines.push({cat,desc,amt,qt:qt||""});
+  const sl=n0(D.part.slitte), so=n0(D.part.soll), carriN=n*sl, sollN=n*so;
+  const ph = n0(Cc.prog_hf) + n*n0(Cc.prog_hc) + carriN*n0(Cc.prog_hcar);
+  const povr = num(Cc.prog_ovr);
+  const prog = isFinite(povr) ? povr : ph*rate(Cc.prog_rate);
+  let direct = 0, ext = NaN, missingGeo = false, missingSteel = false;
+  const nst = Math.max(1, Math.round(n0(D.cfg.nst)) || 1);
+  const sP=steel(M.plate), sFP=steel(M.plateFig), sF=steel(M.fig), sC=steel(M.carri);
+  if(Cc.mode==="unica"){
+    const o = num(D.cfg.ovr[ci]);
+    ext = (isFinite(o) ? o : n0(Cc.ext_fisso)+n*n0(Cc.ext_imp))*nst;
+    add("Stampo","Costruzione stampo (fornitore esterno)",ext, (isFinite(o)?"da offerta":"stima")+(nst>1?" × "+nst+" stampi":""));
+  } else {
+    if(!geo) missingGeo = true;
+    else {
+      const kg = geo.kg;
+      const need = [sP,sFP,sF]; if(kg.carri>0) need.push(sC);
+      if(need.some(s=>!s.ok || !isFinite(s.eurkg))) missingSteel = true;
+      if(M.base==="norm"){
+        add("Materiali","Portastampo normalizzato (piastre "+M.plate+", figura "+M.plateFig+")", kg.base*(sP.eurkg+n0(M.k_norm))+kg.fig_plate*(sFP.eurkg+n0(M.k_norm)), FQ.format(kg.base+kg.fig_plate)+" kg");
+      } else {
+        add("Materiali","Acciaio piastre portastampo "+M.plate, kg.base*sP.eurkg, FQ.format(kg.base)+" kg");
+        add("Materiali","Acciaio piastre figura "+M.plateFig, kg.fig_plate*sFP.eurkg, FQ.format(kg.fig_plate)+" kg");
+        const h = (kg.base*sP.lav + kg.fig_plate*sFP.lav)*n0(M.h_kg);
+        add("Lavorazioni","Squadratura e lavorazione piastre portastampo", h*rate("fres"), FQ.format(h)+" h");
+      }
+      add("Materiali","Acciaio tasselli figura "+M.fig, kg.fig*sF.eurkg, FQ.format(kg.fig)+" kg");
+      if(kg.carri>0) add("Materiali","Acciaio carri e sollevatori "+M.carri, kg.carri*sC.eurkg, FQ.format(kg.carri)+" kg");
+      let tr = kg.fig*sF.tratt + kg.carri*sC.tratt, kt = (sF.tratt>0?kg.fig:0)+(sC.tratt>0?kg.carri:0);
+      if(M.base!=="norm"){ tr += kg.base*sP.tratt + kg.fig_plate*sFP.tratt; kt += (sP.tratt>0?kg.base:0)+(sFP.tratt>0?kg.fig_plate:0); }
+      if(tr>0) add("Trattamenti","Tempra e rinvenimento", tr, FQ.format(kt)+" kg");
+    }
+    if(D.proc.feed!=="freddo"){
+      const hot = D.proc.feed==="caldo";
+      add("Materiali", hot?"Ugelli canale caldo":"Ugelli cold deck", n*n0(D.proc.ugello), n+" pz");
+      if(n>1) add("Materiali", hot?"Collettore canale caldo":"Distributore cold deck", n0(D.proc.collettore));
+    }
+    const finF = (FINITURE.find(f=>f[0]===D.part.fin)||[0,0,1])[2];
+    Cc.rows.forEach((r,ri)=>{
+      const units = r.unit==="carro" ? carriN : (r.unit==="soll" ? sollN : n);
+      const q = n0(r.qf) + n0(r.qu)*units;
+      if(r.kind==="h"){
+        const f = r.fac==="fig" ? sF.lav : r.fac==="figfin" ? sF.lav*finF : r.fac==="carri" ? sC.lav : 1;
+        lines.push({cat:r.cat, desc:r.desc, amt:q*f*rate(r.rate), qt:FQ.format(q*f)+" h", ri});
+      } else lines.push({cat:r.cat, desc:r.desc, amt:q, qt:"", ri});
+    });
+    if(nst>1) lines.forEach(l=>{ l.amt*=nst; l.qt=(l.qt?l.qt+" ":"")+"× "+nst+" stampi"; });
+  }
+  const qh = (n0(Cc.isir_q)*n0(Cc.isir_pz)*n*nst + n0(Cc.cpk_q)*n0(Cc.cpk_pz))*n0(Cc.isir_min)/60 + n0(Cc.doc_h);
+  const qAmt = qh*rate("metro");
+  if(qAmt>0) lines.push({cat:"Collaudo e documentazione", desc:"Collaudo dimensionale (ISIR"+(n0(Cc.cpk_q)>0?", Cp/Cpk":"")+") e documentazione", amt:qAmt, qt:FQ.format(qh)+" h"});
+  direct = Cc.mode==="unica" ? ext + qAmt : lines.reduce((a,l)=>a+l.amt,0);
+  const imp = n0(Cc.imprev)/100, mg = n0(Cc.margin)/100;
+  const cost = Cc.mode==="unica" ? ext + (prog+qAmt)*(1+imp) : (direct+prog)*(1+imp);
+  const price = Cc.mtype==="costo" ? cost*(1+mg) : (mg<1 ? cost/(1-mg) : NaN);
+  const base = direct + prog;
+  const ok = !(missingGeo || missingSteel);
+  return {lines, prog, ph, qh, qAmt, nst, direct, cost: ok?cost:NaN, price: ok?price:NaN, f: ok && base>0 ? price/base : NaN, missingGeo, missingSteel, ext};
+}
+
+/* ============================================================ calcolo complessivo */
+function compute(){
+  const R = {};
+  const P = D.part;
+  R.mat = matInfo(); R.dens = R.mat.rho; R.rhoM = R.mat.rhoM;
+  if(P.vmode==="volume"){ R.vol=num(P.vol); R.peso=R.vol*R.dens; } else { R.peso=num(P.peso); R.vol=R.peso/R.dens; }
+  R.L=num(P.L); R.W=num(P.W); R.H=num(P.H);
+  R.hasGeo = R.L>0 && R.W>0 && R.H>0;
+  const lq = num(P.lim_q); R.lim_q = lq>0 ? lq : Infinity;
+  R.ys = D.qty.y.map(n0);
+  R.Qmax = Math.max.apply(null, R.ys); R.Qtot = R.ys.reduce((a,b)=>a+b,0);
+  R.ore = n0(D.qty.gg)*n0(D.qty.turni)*n0(D.qty.hturno)*pc("qty.oee");
+  const marg = pc("qty.marg_cap"), scarto = pc("qty.scarto");
+  R.marg = marg; R.scarto = scarto;
+  R.ciclo = num(D.proc.ciclo); R.cicli = 3600/R.ciclo;
+  R.runner = pc("proc.runner");
+  R.pzh = R.Qmax/R.ore; R.pzh_m = R.pzh*(1+marg);
+  { const fo=num(D.proc.fermo_ogni), fd=n0(D.proc.fermo_dur); R.effF = fo>0 ? fo/(fo+fd) : 1; }
+  R.nst = Math.max(1, Math.round(n0(D.cfg.nst)) || 1);
+  R.nYears = R.ys.filter(q=>q>0).length || 1;
+  R.n_dom = Math.max(1, Math.ceil(R.pzh_m/(R.cicli*(1-scarto)*R.effF*R.nst)));
+  R.shotW = R.peso*(1+R.runner); R.v_cav = R.shotW/R.rhoM;
+  const Pr = D.press, full = Pr.mode==="completa";
+  R.full = full;
+  R.cap = num(Pr.cap); R.hasCap = R.cap>0;
+  R.shot_min = pc("press.shot_min"); R.shot_max = pc("press.shot_max");
+  R.F = num(Pr.F); R.fimp = num(Pr.f_man); R.margF = pc("press.marg_F");
+  R.hasF = full && R.F>0 && R.fimp>0;
+  R.col_h = num(Pr.col_h); R.col_v = num(Pr.col_v); R.hasCol = full && R.col_h>0 && R.col_v>0;
+  R.hmin = num(Pr.hmin); R.hmax = num(Pr.hmax); R.hasHt = full && (R.hmin>0 || R.hmax>0);
+  R.cmode = Pr.cmode;
+  R.tariffa = Pr.cmode==="man" ? num(Pr.t_man) : (Pr.cmode==="semi" ? num(Pr.t_semi) : num(Pr.tariffa));
+  R.n_shot_max = R.hasCap ? Math.floor(R.shot_max*R.cap/R.v_cav) : Infinity;
+  R.n_shot_min = R.hasCap ? Math.ceil(R.shot_min*R.cap/R.v_cav) : 1;
+  R.n_F_max = R.hasF ? Math.floor(R.F/(R.fimp*(1+R.margF))) : Infinity;
+  // corsa di dosaggio in D
+  R.dv = num(Pr.dv); R.hasDv = R.dv>0;
+  R.volD = R.hasDv ? Math.PI*Math.pow(R.dv/10,2)/4*(R.dv/10) : NaN;
+  const M = R.mat;
+  R.hasD = R.hasDv && M.dMin>0 && M.dMax>0 && R.v_cav>0;
+  R.n_D_min = R.hasD ? Math.max(1, Math.ceil(M.dMin*R.volD/R.v_cav)) : 1;
+  R.n_D_max = R.hasD ? Math.floor(M.dMax*R.volD/R.v_cav) : Infinity;
+  R.n_D_lo = R.hasD && M.dLo>0 ? Math.max(1, Math.ceil(M.dLo*R.volD/R.v_cav)) : 1;
+  R.n_D_hi = R.hasD && M.dHi>0 ? Math.floor(M.dHi*R.volD/R.v_cav) : Infinity;
+  // tempo di permanenza
+  const vci = num(Pr.vcan);
+  R.vcanEst = !(vci>0) && R.hasCap;
+  R.vcan = vci>0 ? vci : (R.hasCap ? 1.85*R.cap : NaN);
+  R.hasPerm = R.vcan>0 && M.perm>0 && R.v_cav>0 && R.ciclo>0;
+  R.n_P_min = R.hasPerm ? Math.max(1, Math.ceil(0.8*R.vcan*R.ciclo/60/(M.perm*R.v_cav))) : 1;
+  R.n_max = Math.min(R.n_shot_max, R.n_F_max, R.lim_q, R.n_D_max);
+  R.n_hard = Math.max(R.n_dom, R.n_D_min, R.n_P_min);
+  R.n_low = Math.max(R.n_hard, R.n_shot_min);
+  // stima raffreddamento
+  { const Tm=num(D.proc.Tm)>0?num(D.proc.Tm):M.Tm, Tw=num(D.proc.Tw)>0?num(D.proc.Tw):M.Tw, Te=num(D.proc.Te)>0?num(D.proc.Te):M.Te, a=M.a, sp=num(D.proc.s);
+    const arg = 8/(Math.PI*Math.PI)*(Tm-Tw)/(Te-Tw);
+    const ok = D.job.tipo!=="LSR" && sp>0 && a>0 && Tm>Te && Te>Tw && arg>1;
+    const t = ok ? sp*sp/(Math.PI*Math.PI*a)*Math.log(arg) : NaN;
+    R.cool = {ok, Tm, Tw, Te, a, t, ciclo: ok ? t + n0(D.proc.t_inj) + n0(D.proc.t_mov) : NaN}; }
+  // aiuto forza di chiusura
+  { const md=D.press.cf_mode; let A;
+    if(md==="rett") A=num(D.press.cf_L)*num(D.press.cf_W)/100;
+    else if(md==="cerchio") A=Math.PI*Math.pow(num(D.press.cf_d),2)/4/100;
+    else if(md==="area") A=num(D.press.cf_A);
+    else A=R.L*R.W/100;
+    A = A*(1+n0(D.press.cf_run)/100);
+    const F = num(D.press.cf_F)>0 ? num(D.press.cf_F) : (M.F>0 ? M.F : 1);
+    R.cf = {A, F, t: A*n0(D.press.cf_p)*F/1000}; }
+  R.vita = num(D.mold.vita);
+  R.cmat = R.peso/1000*num(P.costmat)*(1+R.runner)/(1-scarto);
+
+  R.cols = [];
+  for(let i=0;i<NCFG;i++){
+    const n = num(D.cfg.n[i]);
+    const c = {i, n};
+    if(!(n>0)){ c.valid=false; R.cols.push(c); continue; }
+    c.valid = true; n === Math.round(n) || (c.n = Math.round(n));
+    const ci = num(D.cfg.ciclo[i]); c.ciclo = ci>0 ? ci : R.ciclo;
+    c.nst = R.nst;
+    c.pzh = c.n*3600/c.ciclo*(1-scarto)*R.effF;
+    c.capY = c.pzh*R.nst*R.ore; c.cop = c.capY/R.Qmax; c.satPeak = (R.Qmax/(c.pzh*R.nst))/R.ore;
+    c.years = R.ys.map(q=>({q, oreM:q/(c.pzh*R.nst), sat:(q/(c.pzh*R.nst))/R.ore}));
+    c.shot = c.n*R.v_cav; c.shotp = R.hasCap ? c.shot/R.cap : NaN;
+    c.fcl = R.hasF ? c.n*R.fimp*(1+R.margF) : NaN; c.fclp = c.fcl/R.F;
+    c.dstroke = R.hasDv ? c.shot/R.volD : NaN;
+    c.perm = R.hasPerm ? 0.8*R.vcan/c.shot*c.ciclo/60 : NaN;
+    c.geo = R.hasGeo ? geom(c.n, R) : null;
+    c.cicliTot = R.Qtot/(c.n*(1-scarto)*R.nst);
+    c.anniVita = R.vita>0 ? R.vita*c.n*(1-scarto)*R.nst/(R.Qtot/R.nYears) : NaN;
+    c.k_dom = c.cop >= 1+marg ? "OK" : "NO";
+    c.k_shot = !R.hasCap ? "n/d" : c.shotp>R.shot_max ? "NO (troppo)" : (c.shotp<R.shot_min ? "ATTENZIONE (poco)" : "OK");
+    c.k_F = !R.hasF ? "n/d" : (c.fclp<=1 ? "OK" : "NO");
+    c.k_q = c.n<=R.lim_q ? "OK" : "NO";
+    if(!c.geo || !R.hasCol) c.k_dim = "n/d";
+    else { const a=c.geo.Wm, b=c.geo.Hm, h=R.col_h, v=R.col_v;
+      c.k_dim = ((a<=h&&b<=v)||(b<=h&&a<=v)) ? "OK" : (Math.min(a,b)<=Math.max(h,v) ? "ATTENZIONE (caricamento)" : "NO"); }
+    if(!c.geo || !R.hasHt) c.k_h = "n/d";
+    else c.k_h = (R.hmin>0 && c.geo.T<R.hmin) ? "NO (troppo basso)" : ((R.hmax>0 && c.geo.T>R.hmax) ? "NO (troppo alto)" : "OK");
+    c.k_vita = !(R.vita>0) ? "n/d" : (c.cicliTot>R.vita ? "ATTENZIONE (oltre la vita)" : "OK");
+    { const Mt=R.mat;
+      c.k_D = !R.hasD ? "n/d" : c.dstroke<Mt.dMin ? "NO (corsa corta)" : c.dstroke>Mt.dMax ? "NO (corsa lunga)" :
+        ((Mt.dLo>0 && c.dstroke<Mt.dLo) || (Mt.dHi>0 && c.dstroke>Mt.dHi)) ? "ATTENZIONE (fuori ottimo)" : "OK";
+      c.k_perm = !R.hasPerm ? "n/d" : c.perm>Mt.perm ? "NO (permanenza)" : c.perm>0.8*Mt.perm ? "ATTENZIONE (permanenza)" : "OK"; }
+    const ks = [c.k_dom,c.k_shot,c.k_F,c.k_q,c.k_dim,c.k_h,c.k_vita,c.k_D,c.k_perm];
+    const pend = [c.k_shot,c.k_F,c.k_dim].some(k=>k==="n/d") || !R.hasDv || !(R.vcan>0);
+    c.esito = ks.some(k=>k.indexOf("NO")===0) ? "NON FATTIBILE" : (ks.some(k=>k.indexOf("ATTENZ")===0) ? "FATTIBILE (riserve)" : (pend ? "FATTIBILE (pressa da verificare)" : "FATTIBILE"));
+    c.m = moldCost(c.n, c.geo, i);
+    c.c_stampo = D.cost.basis==="costo" ? c.m.cost : c.m.price;
+    c.c_amm = c.c_stampo/R.Qtot;
+    c.c_pressa = R.tariffa/c.pzh;
+    c.c_mat = R.cmat;
+    c.c_tot = c.c_amm + c.c_pressa + c.c_mat;
+    c.c_prog = c.c_tot*R.Qtot;
+    c.feasible = c.esito.indexOf("FATTIBILE")===0 && isFinite(c.c_tot);
+    R.cols.push(c);
+  }
+  const feas = R.cols.filter(c=>c.feasible);
+  const minC = feas.length ? Math.min.apply(null, feas.map(c=>c.c_tot)) : NaN;
+  R.best = -1; R.cols.forEach(c=>{ c.isBest = c.feasible && c.c_tot===minC; if(c.isBest && R.best<0) R.best=c.i; });
+  let si;
+  if(D.quote.sel==="auto"){
+    si = R.best;
+    if(si<0){ let bc=Infinity; R.cols.forEach(c=>{ if(c.valid && isFinite(c.c_tot) && c.c_tot<bc){bc=c.c_tot; si=c.i;} }); }
+    if(si<0) si = R.cols.findIndex(c=>c.valid);
+  } else { si = parseInt(D.quote.sel,10); if(!(si>=0 && si<NCFG) || !R.cols[si].valid) si = R.cols.findIndex(c=>c.valid); }
+  R.si = si; R.sel = si>=0 ? R.cols[si] : null; R.auto = D.quote.sel==="auto";
+  // pezzi per carica del forno
+  { const P=D.piece; let n=NaN, det="";
+    if(P.ov_type==="rot"){
+      const bv = R.vol>0 ? Math.floor(n0(P.ov_V)*1000*n0(P.ov_fill)/100/R.vol) : NaN;
+      const bk = R.peso>0 && num(P.ov_kg)>0 ? Math.floor(num(P.ov_kg)*1000/R.peso) : NaN;
+      n = isFinite(bv)&&isFinite(bk) ? Math.min(bv,bk) : (isFinite(bv)?bv:bk);
+      det = "per volume "+fmt(bv,0)+", per peso "+fmt(bk,0);
+    } else if(R.hasGeo){
+      const g=n0(P.ov_gap), Lt=n0(P.ov_L)*10, Pt=n0(P.ov_P)*10;
+      const o1=Math.floor(Lt/(R.L+g))*Math.floor(Pt/(R.W+g)), o2=Math.floor(Lt/(R.W+g))*Math.floor(Pt/(R.L+g));
+      const layers=Math.floor(n0(P.ov_H)*10/(R.H+g));
+      n = Math.max(o1,o2)*layers*n0(P.ov_n);
+      det = fmt(Math.max(o1,o2)*layers,0)+" per vassoio";
+    }
+    R.ov = {ok: n>0, n, det}; }
+  R.pc = R.sel ? pieceCost(R, R.sel) : null;
+  return R;
+}
+
+/* ============================================================ costo pezzo */
+function opCost(op, lot){
+  const a=num(op.a), h=num(op.h), r=num(op.rate), e=num(op.eur);
+  if(op.type==="pzh") return a>0 ? n0(op.rate)/a : NaN;
+  if(op.type==="carica") return a>0 ? n0(op.h)*n0(op.rate)/a : NaN;
+  if(op.type==="pz") return n0(op.eur);
+  if(op.type==="lotto") return lot>0 ? n0(op.eur)/lot : NaN;
+  return NaN;
+}
+function pieceCost(R, c){
+  const P=D.piece, o={}, nst=R.nst, pzhT=c.pzh*nst, peso=R.peso, cg=n0(D.part.costmat)/1000;
+  // imballo
+  const bL=num(P.box_L), bW=num(P.box_W), bH=num(P.box_H);
+  o.byVol = (bL>0&&bW>0&&bH>0&&R.hasGeo) ? Math.floor(n0(P.box_fill)/100*bL*bW*bH*1000/(R.L*R.W*R.H)) : NaN;
+  o.byKg = (num(P.box_kg)>0&&peso>0) ? Math.floor(num(P.box_kg)*1000/peso) : NaN;
+  const man=num(P.box_pz);
+  o.pcsBox = man>0 ? Math.floor(man) : (isFinite(o.byVol)&&isFinite(o.byKg) ? Math.min(o.byVol,o.byKg) : (isFinite(o.byVol)?o.byVol:o.byKg));
+  const hasBox = o.pcsBox>0;
+  o.boxKg = hasBox ? o.pcsBox*peso/1000 : NaN;
+  const cBox = hasBox ? (n0(P.box_eur)+n0(P.box_extra))/o.pcsBox : 0;
+  const unit = hasBox ? o.pcsBox : 1;
+  // lotto
+  const k = num(P.lotk)>0 ? num(P.lotk) : 1, tmin=n0(P.tmin);
+  const shotG = R.shotW*c.n;
+  o.setupLot = nst*(n0(P.setup_h)*n0(P.setup_rate) + n0(P.spurgo)*1000*cg + n0(P.avv)*shotG*cg);
+  o.spcH = n0(P.spc_q)*n0(P.spc_pz)*n0(D.cost.isir_min)/60;
+  o.spcLot = o.spcH*rate("metro");
+  o.camp = Math.ceil(Math.max(peso>0 ? n0(P.camp_kg)*1000/peso : 0, n0(P.camp_h)*c.pzh));
+  const amm = P.amm==="si" ? c.m.cost/R.Qtot : 0;
+  const sg = n0(P.sg)/100, mg = n0(P.margin)/100;
+  const keys = ["mold","mat","setup","ops","box","amm"];
+  const sum = {}; keys.forEach(x=>sum[x]=0); let Qs=0, costS=0;
+  o.opsPeak = []; o.badOps = 0;
+  o.years = R.ys.map((q,i)=>{
+    if(!(q>0)) return null;
+    let lot = Math.min(q, Math.max(q/k, tmin*pzhT)); lot = Math.ceil(lot/unit)*unit;
+    const lots = Math.ceil(q/lot);
+    const y = {i, q, lot, lots};
+    y.mold = R.tariffa/c.pzh; y.mat = R.cmat; y.setup = lots*(o.setupLot+o.spcLot)/q;
+    const oc = D.piece.ops.map(op=>opCost(op, lot));
+    y.ops = oc.reduce((a,x)=>a+(isFinite(x)?x:0),0); y.oc = oc;
+    y.box = cBox; y.amm = amm;
+    y.cost = keys.reduce((a,x)=>a+y[x],0);
+    y.price = mg<1 ? y.cost*(1+sg)/(1-mg) : NaN;
+    y.kg = q*R.shotW/1000/(1-R.scarto) + lots*nst*(n0(P.spurgo) + n0(P.avv)*shotG/1000);
+    keys.forEach(x=>sum[x]+=y[x]*q); Qs+=q; costS+=y.cost*q;
+    return y;
+  });
+  o.badOps = D.piece.ops.filter(op=>!isFinite(opCost(op,1))).length;
+  const ys = o.years.filter(Boolean);
+  o.peak = ys.reduce((a,y)=>(!a||y.q>a.q)?y:a, null);
+  o.avg = {}; keys.forEach(x=>o.avg[x]= Qs>0 ? sum[x]/Qs : NaN);
+  o.cost = Qs>0 ? costS/Qs : NaN;
+  o.price = mg<1 ? o.cost*(1+sg)/(1-mg) : NaN;
+  o.sg = o.cost*sg; o.marg = o.price - o.cost*(1+sg);
+  return o;
+}
+
+/* ============================================================ stato degli step */
+function statuses(R){
+  const st = [];
+  st.push(D.job.cliente && D.job.cliente.trim() ? {s:"ok"} : {s:"warn", m:"Manca il nome del cliente (serve per il preventivo)."});
+  const p = [];
+  if(!R.mat.ok) p.push("materiale non presente in libreria"); if(!(R.vol>0) || !(R.dens>0)) p.push("volume o peso e densità");
+  if(!R.hasGeo) p.push("ingombro del pezzo (serve per struttura e acciai dello stampo)");
+  if(!(num(D.part.costmat)>=0)) p.push("costo del materiale");
+  st.push(p.length ? {s:((!(R.vol>0)||!R.mat.ok)?"todo":"warn"), m:"Dati mancanti: "+p.join("; ")+"."} : (R.mat.rhoMest ? {s:"warn", m:"Densità del fuso non in libreria: stimata come 85% di quella solida."} : {s:"ok"}));
+  st.push(R.Qmax>0 && R.ore>0 ? {s:"ok"} : {s:"todo", m:"Inserisci almeno un anno con quantità e il calendario produttivo."});
+  st.push(R.ciclo>0 ? {s:"ok"} : {s:"todo", m:"Inserisci il tempo ciclo."});
+  if(!(R.tariffa>0)) st.push({s:"todo", m:"Inserisci la tariffa oraria della pressa."});
+  else if(!R.full) st.push({s:"warn", m:"Pressa a occhio: chiusura, colonne e altezza stampo non sono verificate"+(R.hasCap?"":", e nemmeno capacità di iniezione e permanenza")+(R.hasDv?"":"; senza diametro vite non è verificata la corsa di dosaggio")+"."});
+  else { const miss=[]; if(!R.hasF) miss.push("forza di chiusura per impronta"); if(!R.hasCol) miss.push("passaggio colonne"); if(!R.hasCap) miss.push("capacità di iniezione"); if(!R.hasDv) miss.push("diametro vite");
+    st.push(miss.length ? {s:"warn", m:"Verifica incompleta, manca: "+miss.join(", ")+"."} : {s:"ok"}); }
+  st.push(R.best>=0 ? {s:"ok"} : {s:"todo", m:"Nessuna configurazione fattibile: rivedi pressa, ciclo o configurazioni."});
+  if(D.cost.mode==="unica") st.push({s:"ok", m:"Costo stampo a voce unica: la struttura serve solo per ingombro e verifiche."});
+  else if(!R.hasGeo) st.push({s:"todo", m:"Inserisci l’ingombro del pezzo (step 2) per stimare struttura e acciai."});
+  else if(R.sel && R.sel.m.missingSteel) st.push({s:"todo", m:"Uno degli acciai scelti non è in libreria o non ha prezzo."});
+  else st.push({s:"ok"});
+  st.push(R.sel && isFinite(R.sel.m.price) ? {s:"ok"} : {s:"todo", m:"Prezzo non calcolabile: controlla ingombro, acciai, voci e margine (deve essere inferiore al 100% sul prezzo)."});
+  st.push(R.sel && R.sel.feasible ? {s:"ok"} : {s:"warn", m:"La configurazione quotata non risulta fattibile."});
+  { const pc=R.pc;
+    if(!pc || !isFinite(pc.price)) st.push({s:"todo", m:"Prezzo del pezzo non calcolabile: controlla tariffa, quantità e margine (inferiore al 100%)."});
+    else if(pc.badOps>0) st.push({s:"warn", m:pc.badOps+" lavorazioni post-stampaggio senza dati sufficienti: escluse dal costo."});
+    else if(!(pc.pcsBox>0)) st.push({s:"warn", m:"Imballo non definito: il costo d’imballo è escluso."});
+    else st.push({s:"ok"}); }
+  const q=[]; if(!(D.quote.from&&D.quote.from.trim())) q.push("dati della tua azienda"); if(!(D.job.cliente&&D.job.cliente.trim())) q.push("cliente");
+  st.push(q.length ? {s:"warn", m:"Da completare: "+q.join(", ")+"."} : {s:"ok"});
+  st.push({s:"ok"});
+  return st;
+}
+
+/* ============================================================ costruzione interfaccia */
+function buildSteps(){
+  const nav = $("steps"); nav.innerHTML = "";
+  STEPS.forEach((t,i)=>{
+    const b=document.createElement("button"); b.type="button"; b.className="step"; b.id="st"+i;
+    b.innerHTML='<span class="no">'+(i+1)+'</span><span></span><span class="dot"></span>';
+    b.children[1].textContent=t;
+    b.addEventListener("click",()=>go(i));
+    nav.appendChild(b);
+  });
+}
+function go(i){
+  CUR = Math.max(0, Math.min(STEPS.length-1, i));
+  try{ localStorage.setItem(KEY+"-step", String(CUR)); }catch(e){}
+  for(let k=0;k<STEPS.length;k++){ $("p"+(k+1)).hidden = (k!==CUR); $("st"+k).setAttribute("aria-current", k===CUR?"step":"false"); }
+  $("btnPrev").disabled = CUR===0;
+  $("btnNext").disabled = CUR===STEPS.length-1;
+  $("btnNext").textContent = CUR<STEPS.length-1 ? "Avanti: "+STEPS[CUR+1]+" →" : "Avanti →";
+  $("st"+CUR).scrollIntoView({block:"nearest", inline:"nearest"});
+  window.scrollTo({top:0});
+}
+function buildYears(){
+  const t=$("yrs"); t.innerHTML="";
+  const h=document.createElement("tr"); h.innerHTML='<th class="l">Anno</th>'+[0,1,2,3,4].map(i=>'<th>Anno '+(i+1)+' <span id="yl'+i+'"></span></th>').join("")+'<th>Totale</th>';
+  t.appendChild(h);
+  const r1=document.createElement("tr"); r1.innerHTML='<td class="l">Primo anno <input id="ystart" type="number" step="1" style="width:84px"></td>';
+  const r=document.createElement("tr"); r.innerHTML='<td class="l"><b>Pezzi richiesti</b><span class="rownote">Vuoto o 0 = anno non previsto</span></td>';
+  for(let i=0;i<5;i++){ const td=document.createElement("td"); const inp=document.createElement("input"); inp.type="number"; inp.inputMode="decimal"; inp.min=0; inp.step=1000; inp.style.width="110px"; inp.value=D.qty.y[i];
+    inp.setAttribute("aria-label","Pezzi richiesti anno "+(i+1));
+    inp.addEventListener("input",()=>{ D.qty.y[i]=inp.value; save(); update(); }); td.appendChild(inp); r.appendChild(td); }
+  const tdT=document.createElement("td"); tdT.className="out"; tdT.id="ytot"; r.appendChild(tdT);
+  const r3=document.createElement("tr"); r3.innerHTML='<td class="l">Pezzi/ora richiesti</td>'+[0,1,2,3,4].map(i=>'<td class="out" id="yph'+i+'"></td>').join("")+'<td></td>';
+  t.appendChild(r); t.appendChild(r3);
+  const cap=document.createElement("caption"); cap.style.captionSide="bottom"; cap.style.textAlign="left"; cap.style.padding="6px 8px";
+  cap.innerHTML='<label>Primo anno di fornitura <input id="ystart" type="number" step="1" style="width:90px;font:inherit;color:var(--input-ink);background:var(--input-bg);border:1px solid var(--line);border-radius:5px;padding:3px 6px"></label>';
+  t.appendChild(cap);
+  const ys=$("ystart"); ys.value=D.qty.start; ys.addEventListener("input",()=>{ D.qty.start=ys.value; save(); update(); });
+}
+function buildCfgEd(){
+  const t=$("cfgEd"); t.innerHTML="";
+  const h=document.createElement("tr"); h.innerHTML='<th class="l"></th>'+Array.from({length:NCFG},(_,i)=>'<th>Colonna '+(i+1)+'</th>').join(""); t.appendChild(h);
+  [["n","Numero di impronte"],["ciclo","Tempo ciclo (s)"]].forEach(([k,l])=>{
+    const tr=document.createElement("tr"); const th=document.createElement("td"); th.className="l"; th.textContent=l; tr.appendChild(th);
+    for(let i=0;i<NCFG;i++){ const td=document.createElement("td"); const inp=document.createElement("input"); inp.type="number"; inp.inputMode="decimal"; inp.min=0; inp.step=k==="n"?1:.5;
+      inp.value=D.cfg[k][i]; inp.placeholder = k==="ciclo" ? "base" : ""; inp.setAttribute("aria-label",l+" colonna "+(i+1));
+      inp.addEventListener("input",()=>{ D.cfg[k][i]=inp.value; save(); update(); }); td.appendChild(inp); tr.appendChild(td); }
+    t.appendChild(tr);
+  });
+  const tr=document.createElement("tr"); tr.innerHTML='<td class="l">Esito</td>'+Array.from({length:NCFG},(_,i)=>'<td class="out" id="ce'+i+'"></td>').join(""); t.appendChild(tr);
+}
+function buildLib(){
+  const t=$("lib"); t.innerHTML="";
+  t.innerHTML='<tr><th class="l">Designazione</th><th class="l">Descrizione</th><th class="l">Stato di fornitura</th><th>€/kg</th><th>Trattamento €/kg</th><th>Lavorabilità</th><th></th></tr>';
+  D.lib.forEach((s,i)=>{
+    const tr=document.createElement("tr");
+    [["code","text",90],["desc","text",220],["stato","text",170],["eurkg","number",70],["tratt","number",70],["lav","number",70]].forEach(([k,ty,w])=>{
+      const td=document.createElement("td"); if(ty==="text") td.className="l";
+      const inp=document.createElement("input"); inp.type=ty; if(ty==="number"){ inp.inputMode="decimal"; inp.step="any"; inp.min=0; }
+      inp.style.width=w+"px"; if(ty==="text") inp.style.textAlign="left"; inp.value=s[k];
+      inp.setAttribute("aria-label",k+" "+s.code);
+      inp.addEventListener("input",()=>{ D.lib[i][k]=inp.value; save(); syncFields(); update(); });
+      td.appendChild(inp); tr.appendChild(td);
+    });
+    const td=document.createElement("td"); const b=document.createElement("button"); b.type="button"; b.className="small"; b.textContent="Elimina";
+    b.addEventListener("click",()=>{ D.lib.splice(i,1); save(); buildLib(); syncFields(); update(); }); td.appendChild(b); tr.appendChild(td);
+    t.appendChild(tr);
+  });
+}
+function buildMatLib(){
+  const t=$("mlib"); t.innerHTML='<tr>'+MATH.map((h,i)=>'<th'+(i<2?' class="l"':'')+'>'+esc(h)+'</th>').join("")+'<th></th></tr>';
+  D.matlib.forEach((m,i)=>{
+    const tr=document.createElement("tr");
+    MATF.forEach((k,j)=>{
+      const td=document.createElement("td"); if(j<2) td.className="l";
+      const inp=document.createElement("input"); inp.type=j<2?"text":"number"; if(j>=2){ inp.inputMode="decimal"; inp.step="any"; inp.min=0; }
+      inp.style.width=(j===0?"78px":j===1?"190px":"64px"); if(j<2) inp.style.textAlign="left"; inp.value=m[k];
+      inp.setAttribute("aria-label",MATH[j]+" "+m.code);
+      inp.addEventListener("input",()=>{ D.matlib[i][k]=inp.value; save(); syncFields(); update(); });
+      td.appendChild(inp); tr.appendChild(td);
+    });
+    const td=document.createElement("td"); const b=document.createElement("button"); b.type="button"; b.className="small"; b.textContent="Elimina";
+    b.addEventListener("click",()=>{ D.matlib.splice(i,1); save(); buildMatLib(); syncFields(); update(); }); td.appendChild(b); tr.appendChild(td);
+    t.appendChild(tr);
+  });
+  const f=$("flib"); f.innerHTML='<tr><th class="l">Sigla</th><th class="l">Carica</th><th>Densità (g/cm³)</th><th></th></tr>';
+  D.fills.forEach((x,i)=>{
+    const tr=document.createElement("tr");
+    [["code","text","80px"],["name","text","200px"],["rho","number","80px"]].forEach(([k,ty,w])=>{
+      const td=document.createElement("td"); if(ty==="text") td.className="l";
+      const inp=document.createElement("input"); inp.type=ty; if(ty==="number"){ inp.inputMode="decimal"; inp.step="any"; inp.min=0; } else inp.style.textAlign="left";
+      inp.style.width=w; inp.value=x[k]; inp.setAttribute("aria-label",k+" "+x.name);
+      inp.addEventListener("input",()=>{ D.fills[i][k]=inp.value; save(); syncFields(); update(); });
+      td.appendChild(inp); tr.appendChild(td);
+    });
+    const td=document.createElement("td"); const b=document.createElement("button"); b.type="button"; b.className="small"; b.textContent="Elimina";
+    b.addEventListener("click",()=>{ D.fills.splice(i,1); save(); buildMatLib(); syncFields(); update(); }); td.appendChild(b); tr.appendChild(td);
+    f.appendChild(tr);
+  });
+}
+function buildOps(){
+  const t=$("post"); t.innerHTML='<tr><th class="l">Lavorazione</th><th>Calcolo</th><th>Pz/h o pz/carica</th><th>Ore/carica</th><th>€/h</th><th>Importo €</th><th class="r">€/pz (picco)</th><th></th></tr>';
+  if(!D.piece.ops.length){ t.innerHTML+='<tr><td class="l" colspan="8">Nessuna lavorazione: aggiungine una con i pulsanti sopra.</td></tr>'; }
+  const use = {pzh:["a","rate"], carica:["a","h","rate"], pz:["eur"], lotto:["eur"]};
+  D.piece.ops.forEach((op,i)=>{
+    const tr=document.createElement("tr");
+    const td0=document.createElement("td"); td0.className="l"; const d=document.createElement("input"); d.type="text"; d.className="txt"; d.value=op.desc;
+    d.setAttribute("aria-label","Descrizione lavorazione"); d.addEventListener("input",()=>{ D.piece.ops[i].desc=d.value; save(); update(); }); td0.appendChild(d); tr.appendChild(td0);
+    const td1=document.createElement("td"); const sel=document.createElement("select"); sel.innerHTML=OPTYPES.map(o=>'<option value="'+o[0]+'">'+o[1]+'</option>').join(""); sel.value=op.type;
+    sel.setAttribute("aria-label","Tipo di calcolo – "+op.desc); sel.addEventListener("change",()=>{ D.piece.ops[i].type=sel.value; save(); buildOps(); update(); }); td1.appendChild(sel); tr.appendChild(td1);
+    ["a","h","rate","eur"].forEach(k=>{
+      const td=document.createElement("td");
+      if((use[op.type]||[]).indexOf(k)<0){ td.className="nd"; td.textContent="—"; }
+      else { const inp=document.createElement("input"); inp.type="number"; inp.inputMode="decimal"; inp.step="any"; inp.min=0; inp.value=op[k];
+        inp.setAttribute("aria-label",k+" – "+op.desc); inp.addEventListener("input",()=>{ D.piece.ops[i][k]=inp.value; save(); update(); }); td.appendChild(inp); }
+      tr.appendChild(td);
+    });
+    const res=document.createElement("td"); res.className="out r"; res.id="op_"+i; tr.appendChild(res);
+    const tdd=document.createElement("td"); const b=document.createElement("button"); b.type="button"; b.className="small"; b.textContent="Elimina";
+    b.addEventListener("click",()=>{ D.piece.ops.splice(i,1); save(); buildOps(); update(); }); tdd.appendChild(b); tr.appendChild(tdd);
+    t.appendChild(tr);
+  });
+}
+function buildOpsAdd(){
+  const host=$("postAdd"); host.innerHTML="";
+  [["Forno (post-vulcanizzazione, ricottura)",{desc:"Forno",type:"carica",a:"",h:4,rate:20,eur:""}],
+   ["Cernita / controllo 100%",{desc:"Cernita",type:"pzh",a:600,h:"",rate:30,eur:""}],
+   ["Sbavatura",{desc:"Sbavatura",type:"pzh",a:400,h:"",rate:30,eur:""}],
+   ["Lavorazione esterna (€/pz)",{desc:"Lavorazione esterna",type:"pz",a:"",h:"",rate:"",eur:0.01}],
+   ["Altra voce a lotto",{desc:"Voce a lotto",type:"lotto",a:"",h:"",rate:"",eur:50}]].forEach(([l,o])=>{
+    const b=document.createElement("button"); b.type="button"; b.className="small"; b.textContent="+ "+l;
+    b.addEventListener("click",()=>{ D.piece.ops.push(clone(o)); save(); buildOps(); update(); });
+    host.appendChild(b);
+  });
+}
+function renderPiece(R){
+  const pc=R.pc, c=R.sel;
+  if(!pc || !c){ $("tiles10").innerHTML=""; $("pcB").innerHTML=""; $("pcY").innerHTML=""; return; }
+  const pk=pc.peak;
+  D.piece.ops.forEach((op,i)=>{ const el=$("op_"+i); if(el){ const v=pk?pk.oc[i]:NaN; el.textContent = isFinite(v)? fmt(v,4) : "dati mancanti"; } });
+  const y0=parseInt(D.qty.start,10);
+  $("tiles10").innerHTML =
+    '<div class="tile"><b>'+esc(c.n)+(R.nst>1?' × '+R.nst:'')+'</b><span>impronte'+(R.nst>1?' × stampi':'')+' · '+esc(lbl(CMODES,R.cmode).toLowerCase())+'</span></div>'+
+    '<div class="tile"><b>'+esc(fmt(pc.cost,4))+' €</b><span>costo medio per pezzo</span></div>'+
+    '<div class="tile main"><b>'+esc(fmt(pc.price,4))+' €</b><span>prezzo medio per pezzo</span></div>'+
+    '<div class="tile"><b>'+esc(eur(pc.price*1000))+'</b><span>prezzo per 1.000 pezzi</span></div>'+
+    '<div class="tile"><b>'+esc(eur0(pc.price*R.Qtot))+'</b><span>fatturato pezzi sul programma</span></div>';
+  const tot=pc.cost;
+  const rows=[["Stampaggio (pressa + operatore)",pc.avg.mold],["Materiale",pc.avg.mat],["Allestimento, avviamento e controlli per lotto",pc.avg.setup],["Lavorazioni post-stampaggio",pc.avg.ops],["Imballo",pc.avg.box]];
+  if(D.piece.amm==="si") rows.push(["Ammortamento stampo",pc.avg.amm]);
+  let h='<tr><th class="l">Voce (media sul programma)</th><th class="r">€/pz</th><th class="r">Quota</th></tr>';
+  rows.forEach(([l,v])=>{ h+='<tr><td class="l">'+esc(l)+'</td><td class="r">'+fmt(v,4)+'</td><td class="r">'+pct(tot>0?v/tot:NaN,0)+'</td></tr>'; });
+  h+='<tr class="tot"><td class="l">Costo</td><td class="r">'+fmt(tot,4)+'</td><td></td></tr>';
+  h+='<tr><td class="l">Spese generali</td><td class="r">'+fmt(pc.sg,4)+'</td><td></td></tr><tr><td class="l">Margine</td><td class="r">'+fmt(pc.marg,4)+'</td><td></td></tr>';
+  h+='<tr class="tot"><td class="l">Prezzo</td><td class="r">'+fmt(pc.price,4)+'</td><td></td></tr>';
+  $("pcB").innerHTML=h;
+  let t='<tr><th class="l">Anno</th><th class="r">Pezzi</th><th class="r">Lotto</th><th class="r">Lotti</th><th class="r">Materiale (kg)</th><th class="r">Costo €/pz</th><th class="r">Prezzo €/pz</th></tr>';
+  let kg=0;
+  pc.years.forEach(y=>{ if(!y) return; kg+=y.kg; t+='<tr><td class="l">'+(isFinite(y0)?(y0+y.i):"Anno "+(y.i+1))+'</td><td class="r">'+fmt(y.q,0)+'</td><td class="r">'+fmt(y.lot,0)+'</td><td class="r">'+fmt(y.lots,0)+'</td><td class="r">'+fmt(y.kg,0)+'</td><td class="r">'+fmt(y.cost,4)+'</td><td class="r">'+fmt(y.price,4)+'</td></tr>'; });
+  t+='<tr class="tot"><td class="l">Totale</td><td class="r">'+fmt(R.Qtot,0)+'</td><td></td><td></td><td class="r">'+fmt(kg,0)+'</td><td class="r">'+fmt(pc.cost,4)+'</td><td class="r">'+fmt(pc.price,4)+'</td></tr>';
+  $("pcY").innerHTML=t;
+}
+function buildRates(){
+  const t=$("rates"); t.innerHTML='<tr><th class="l">Lavorazione</th><th>€/h</th></tr>';
+  D.rates.forEach((r,i)=>{
+    const tr=document.createElement("tr"); const a=document.createElement("td"); a.className="l"; a.textContent=r.l; tr.appendChild(a);
+    const td=document.createElement("td"); const inp=document.createElement("input"); inp.type="number"; inp.inputMode="decimal"; inp.min=0; inp.step=1; inp.value=r.v;
+    inp.setAttribute("aria-label","Tariffa "+r.l);
+    inp.addEventListener("input",()=>{ D.rates[i].v=inp.value; save(); syncFields(); refreshRateSelects(); update(); }); td.appendChild(inp); tr.appendChild(td);
+    t.appendChild(tr);
+  });
+}
+function rateOptsHtml(sel){ return D.rates.map(r=>'<option value="'+esc(r.k)+'"'+(r.k===sel?" selected":"")+'>'+esc(r.l)+' ('+fmt(n0(r.v),0)+' €/h)</option>').join(""); }
+function refreshRateSelects(){ document.querySelectorAll("select[data-rate]").forEach(s=>{ const v=s.value; s.innerHTML=rateOptsHtml(v); s.value=v; }); }
+function buildVoci(){
+  const t=$("voci"); t.innerHTML='<tr><th class="l">Descrizione</th><th>Tipo</th><th>Tariffa</th><th>Q.tà fissa</th><th>Q.tà per unità</th><th>Unità</th><th>Fattore</th><th class="r">Importo</th><th></th></tr>';
+  VCATS.forEach(cat=>{
+    const tr=document.createElement("tr"); tr.className="grp"; tr.innerHTML='<td colspan="7"></td><td class="r" id="vc_'+VCATS.indexOf(cat)+'"></td><td></td>'; tr.firstChild.textContent=cat; t.appendChild(tr);
+    D.cost.rows.forEach((r,i)=>{
+      if(r.cat!==cat) return;
+      const row=document.createElement("tr");
+      const td=(el)=>{ const c=document.createElement("td"); c.appendChild(el); row.appendChild(c); return c; };
+      const mkIn=(k,cls,ty)=>{ const inp=document.createElement("input"); inp.type=ty||"number"; if(!ty){ inp.inputMode="decimal"; inp.step="any"; inp.min=0; } if(cls) inp.className=cls; inp.value=r[k];
+        inp.setAttribute("aria-label",k+" – "+r.desc); inp.addEventListener("input",()=>{ D.cost.rows[i][k]=inp.value; save(); update(); }); return inp; };
+      const mkSel=(k,opts,extra)=>{ const s=document.createElement("select"); s.innerHTML=opts; s.value=r[k]; s.setAttribute("aria-label",k+" – "+r.desc); if(extra) extra(s);
+        s.addEventListener("change",()=>{ D.cost.rows[i][k]=s.value; save(); if(k==="kind") buildVoci(); update(); }); return s; };
+      const c1=td(mkIn("desc","txt","text")); c1.className="l";
+      td(mkSel("kind",'<option value="h">ore</option><option value="eur">€</option>'));
+      if(r.kind==="h"){ td(mkSel("rate",rateOptsHtml(r.rate),s=>s.dataset.rate="1")); } else { const c=document.createElement("td"); c.textContent="—"; c.className="nd"; row.appendChild(c); }
+      td(mkIn("qf")); td(mkIn("qu"));
+      td(mkSel("unit",UNITS.map(u=>'<option value="'+u[0]+'">'+u[1]+'</option>').join("")));
+      if(r.kind==="h") td(mkSel("fac",FACS.map(u=>'<option value="'+u[0]+'">'+u[1]+'</option>').join(""))); else { const c=document.createElement("td"); c.textContent="—"; c.className="nd"; row.appendChild(c); }
+      const am=document.createElement("td"); am.className="out r"; am.id="va_"+i; row.appendChild(am);
+      const b=document.createElement("button"); b.type="button"; b.className="small"; b.textContent="Elimina";
+      b.addEventListener("click",()=>{ D.cost.rows.splice(i,1); save(); buildVoci(); update(); }); td(b);
+      t.appendChild(row);
+    });
+    const ad=document.createElement("tr"); const tdd=document.createElement("td"); tdd.colSpan=9; tdd.className="l";
+    const b=document.createElement("button"); b.type="button"; b.className="small"; b.textContent="Aggiungi voce a “"+cat+"”";
+    b.addEventListener("click",()=>{ let at=-1; D.cost.rows.forEach((r,i)=>{ if(r.cat===cat) at=i; }); if(at<0) at=D.cost.rows.length-1;
+      D.cost.rows.splice(at+1,0,{cat,desc:"Nuova voce",kind:"h",rate:"fres",qf:0,qu:0,unit:"imp",fac:""}); save(); buildVoci(); update(); });
+    tdd.appendChild(b); ad.appendChild(tdd); t.appendChild(ad);
+  });
+}
+function buildOvr(){
+  const t=$("ovr"); t.innerHTML="";
+  const h=document.createElement("tr"); h.innerHTML='<th class="l"></th>'+Array.from({length:NCFG},(_,i)=>'<th id="oh'+i+'"></th>').join(""); t.appendChild(h);
+  const tr=document.createElement("tr"); tr.innerHTML='<td class="l">Prezzo da offerta (€)<span class="rownote">Vuoto = stima</span></td>';
+  for(let i=0;i<NCFG;i++){ const td=document.createElement("td"); const inp=document.createElement("input"); inp.type="number"; inp.inputMode="decimal"; inp.min=0; inp.step=100; inp.value=D.cfg.ovr[i];
+    inp.setAttribute("aria-label","Prezzo da offerta colonna "+(i+1)); inp.addEventListener("input",()=>{ D.cfg.ovr[i]=inp.value; save(); update(); }); td.appendChild(inp); tr.appendChild(td); }
+  t.appendChild(tr);
+  const t2=document.createElement("tr"); t2.innerHTML='<td class="l">Valore usato (€)</td>'+Array.from({length:NCFG},(_,i)=>'<td class="out" id="ou'+i+'"></td>').join(""); t.appendChild(t2);
+}
+
+/* ============================================================ aggiornamento */
+function clsOf(s){ if(s==="n/d") return "nd"; if(s.indexOf("NO")===0) return "bad"; if(s.indexOf("ATTENZ")===0 || s.indexOf("riserve")>-1 || s.indexOf("verificare")>-1) return "warn"; return "ok"; }
+let LAST = null;
+function update(){
+  const R = compute(); LAST = R;
+  FIELDS.forEach(f=>{ if(f.def.show) f.row.hidden = !f.def.show(); });
+  ROS.forEach(r=>{ r.el.textContent = r.fn(R); });
+  $("cardCF").hidden = !isFull();
+  $("m4b").innerHTML = D.job.tipo==="LSR" ? '<div class="msg info">Per l’LSR il ciclo dipende dalla reticolazione nello stampo caldo: questa stima non si applica.</div>'
+    : (!R.cool.ok ? '<div class="msg warn">Stima non disponibile: servono spessore, diffusività e temperature con T fuso &gt; T estrazione &gt; T stampo.</div>' : "");
+
+  // step status
+  const st = statuses(R);
+  st.forEach((s,i)=>{
+    const d=$("st"+i).querySelector(".dot"); d.className="dot "+s.s; $("st"+i).title = s.m || "Completo";
+    const m=$("m"+(i+1)); if(m){ m.innerHTML = s.m && s.s!=="ok" ? '<div class="msg '+s.s+'">'+esc(s.m)+'</div>' : (s.m ? '<div class="msg info">'+esc(s.m)+'</div>' : ""); }
+  });
+
+  // quantità
+  const y0 = parseInt(D.qty.start,10);
+  for(let i=0;i<5;i++){ $("yl"+i).textContent = isFinite(y0) ? "("+(y0+i)+")" : ""; $("yph"+i).textContent = R.ys[i]>0 ? fmt(R.ys[i]/R.ore,1) : "–"; }
+  $("ytot").textContent = fmt(R.Qtot,0);
+
+  // impronte
+  renderRuler(R);
+  for(let i=0;i<NCFG;i++){ const c=R.cols[i], el=$("ce"+i); el.textContent = c.valid ? c.esito.replace("FATTIBILE (pressa da verificare)","FATTIBILE (pressa ?)") : "–"; el.className = "out "+(c.valid?clsOf(c.esito):"nd"); }
+
+  // struttura
+  renderMold(R);
+  // costi
+  renderCost(R);
+  // confronto
+  renderCmp(R);
+  // costo pezzo
+  renderPiece(R);
+  // preventivo
+  renderSheet(R);
+  // riepilogo
+  renderSum(R);
+}
+
+function renderRuler(R){
+  const ok = [R.n_dom,R.n_max,R.n_low].every(x=>isFinite(x));
+  let t, c;
+  if(!ok){ t="Completa i dati di quantità, ciclo e componente per vedere l’esito."; c="warn"; }
+  else if(R.n_hard>R.n_max){ c="bad";
+    if(R.n_dom>R.n_max) t="Non fattibile su questa pressa: servono più impronte di quelle ammesse. Riduci il ciclo, scegli una pressa più grande o aumenta gli stampi in parallelo (sotto).";
+    else if(R.n_D_min>R.n_max) t="Non fattibile: anche con il massimo delle impronte la corsa di dosaggio resta sotto il minimo. Serve una vite più piccola.";
+    else t="Non fattibile: il materiale resta troppo a lungo nel cilindro. Serve una vite più piccola o un ciclo più corto."; }
+  else if(R.n_low>R.n_max){ t="Domanda coperta, ma lo shot è piccolo per la vite: valuta una pressa più piccola."; c="warn"; }
+  else { t="Fattibile: da "+R.n_low+" a "+R.n_max+" impronte."; c="ok";
+    if(R.hasD && isFinite(R.n_D_hi)) t+=" Corsa di dosaggio ottimale da "+R.n_D_lo+" a "+R.n_D_hi+" impronte.";
+    if(!R.hasF||!R.hasCap||!R.hasDv) t+=" Alcune verifiche della pressa non sono eseguite (step 5)."; }
+  $("verdict").textContent=t; $("verdict").className="verdict "+c;
+  const ru=$("ruler"); ru.innerHTML="";
+  if(ok){
+    const cand=[R.n_dom,R.n_shot_max,R.n_F_max,R.lim_q,R.n_D_max].filter(x=>isFinite(x));
+    const Mx=Math.max(16, Math.min(64, Math.max.apply(null,cand)+4));
+    for(let n=1;n<=Mx;n++){ const d=document.createElement("div"); d.className="tick"; d.textContent=n; let k,tip;
+      if(n>R.n_max){k="over";tip="oltre i limiti di pressa, corsa o qualità";}
+      else if(n<R.n_dom){k="short";tip="non copre il picco";}
+      else if(n<R.n_hard){k="short";tip="sotto il minimo per corsa di dosaggio o permanenza";}
+      else if(n<R.n_shot_min || (R.hasD && (n<R.n_D_lo || n>R.n_D_hi))){k="low";tip="fattibile, fuori dall’ottimo";}
+      else {k="ok";tip="fattibile";}
+      d.className+=" "+k; d.title=n+" impronte: "+tip; ru.appendChild(d); }
+  }
+  $("limits").innerHTML = [
+    ["almeno "+fmt(R.n_dom,0),"Anno di picco"],
+    [R.hasCap?("da "+fmt(R.n_shot_min,0)+" a "+fmt(R.n_shot_max,0)):"non verificato","Capacità di iniezione"],
+    [R.hasD?("da "+fmt(R.n_D_min,0)+" a "+fmt(R.n_D_max,0)):"non verificata","Corsa di dosaggio"],
+    [R.hasPerm?("almeno "+fmt(R.n_P_min,0)):"non verificato","Tempo di permanenza"],
+    [R.hasF?("al massimo "+fmt(R.n_F_max,0)):"non verificata","Forza di chiusura"],
+    [isFinite(R.lim_q)?("al massimo "+fmt(R.lim_q,0)):"nessun limite","Qualità / tolleranze"]
+  ].map(([a,b])=>'<div class="tile"><b>'+esc(a)+'</b><span>'+esc(b)+'</span></div>').join("");
+}
+
+function renderMold(R){
+  const c = R.sel;
+  const ro = $("ro7"); const svg=$("layoutSvg"); const bom=$("bom");
+  if(!c || !c.geo){ svg.innerHTML='<p class="sub">Inserisci l’ingombro del pezzo (step 2) per vedere layout e distinta.</p>'; ro.innerHTML=""; bom.innerHTML=""; return; }
+  const g=c.geo;
+  ro.innerHTML = [
+    ["Configurazione", c.n+" impronte ("+g.cols+" × "+g.rows+")"],
+    ["Ingombro stimato", fmt(g.Wm,0)+" × "+fmt(g.Hm,0)+" mm"],
+    ["Altezza stampo stimata", fmt(g.T,0)+" mm"],
+    ["Peso acciaio grezzo", fmt(g.kgTot,0)+" kg"],
+    ["Passaggio colonne", c.k_dim],
+    ["Altezza stampo vs pressa", c.k_h],
+    ["Cicli del programma / vita", fmt(c.cicliTot,0)+" / "+fmt(R.vita,0)],
+    ["Durata stimata dello stampo", isFinite(c.anniVita)?fmt(c.anniVita,1)+" anni":"–"]
+  ].map(([a,b])=>'<div class="calc"><span>'+esc(a)+'</span><span class="v">'+esc(b)+'</span></div>').join("");
+  // SVG
+  const W=380, sc = Math.min((W-20)/g.X, 260/g.Y), w=g.X*sc, h=g.Y*sc, ox=(W-w)/2, oy=10;
+  let s='<svg viewBox="0 0 '+W+' '+(h+40)+'" width="100%" role="img" aria-label="Vista dall’alto della piastra figura con le impronte">';
+  s+='<rect class="plate" x="'+ox+'" y="'+oy+'" width="'+w+'" height="'+h+'" rx="3"/>';
+  const offX = g.bordo + (g.sl>0?g.cL:0);
+  let k=0;
+  for(let r=0;r<g.rows;r++) for(let q=0;q<g.cols;q++){ if(k>=c.n) break; k++;
+    const x=ox+(offX+q*(g.Lt+g.gap))*sc, y=oy+(g.bordo+r*(g.Wt+g.gap))*sc;
+    s+='<rect class="ins" x="'+x.toFixed(1)+'" y="'+y.toFixed(1)+'" width="'+(g.Lt*sc).toFixed(1)+'" height="'+(g.Wt*sc).toFixed(1)+'" rx="2"/>'; }
+  if(g.sl>0){ s+='<rect class="car" x="'+(ox+ (g.bordo*0.5)*sc).toFixed(1)+'" y="'+(oy+g.bordo*sc).toFixed(1)+'" width="'+(g.cL*sc).toFixed(1)+'" height="'+((g.Y-2*g.bordo)*sc).toFixed(1)+'"/>';
+              s+='<rect class="car" x="'+(ox+w-(g.bordo*0.5+g.cL)*sc).toFixed(1)+'" y="'+(oy+g.bordo*sc).toFixed(1)+'" width="'+(g.cL*sc).toFixed(1)+'" height="'+((g.Y-2*g.bordo)*sc).toFixed(1)+'"/>'; }
+  s+='<text class="muted" x="'+(W/2)+'" y="'+(oy+h+24)+'" text-anchor="middle">Piastra figura '+fmt(g.X,0)+' × '+fmt(g.Y,0)+' mm (fissaggio escluso)</text></svg>';
+  svg.innerHTML=s;
+  // distinta
+  const M=D.mold, map={base:M.plate, fig_plate:M.plateFig, fig:M.fig, carri:M.carri};
+  let tk=0, te=0, tt=0;
+  let html='<tr><th class="l">Componente</th><th>Q.tà</th><th>Grezzo (mm)</th><th>Acciaio</th><th class="r">kg</th><th class="r">Acciaio / normalizzato €</th><th class="r">Trattamento €</th></tr>';
+  g.parts.forEach(p=>{
+    const sx=steel(map[p.grp]);
+    const norm = D.cost.mode!=="unica" && M.base==="norm" && (p.grp==="base"||p.grp==="fig_plate");
+    const e = p.kg*(sx.eurkg + (norm?n0(M.k_norm):0));
+    const tr = (norm?0:1)*p.kg*sx.tratt;
+    tk+=p.kg; te+=e; tt+=tr;
+    html+='<tr><td class="l">'+esc(p.name)+(norm?'<span class="rownote">nel portastampo normalizzato</span>':'')+'</td><td>'+p.q+'</td><td>'+fmt(p.a,0)+' × '+fmt(p.b,0)+' × '+fmt(p.c,0)+'</td><td>'+esc(map[p.grp])+(sx.ok?'':' ⚠')+'</td><td class="r">'+fmt(p.kg,1)+'</td><td class="r">'+eur0(e)+'</td><td class="r">'+(tr>0?eur0(tr):"–")+'</td></tr>';
+  });
+  html+='<tr class="tot"><td class="l">Totale</td><td></td><td></td><td></td><td class="r">'+fmt(tk,1)+'</td><td class="r">'+eur0(te)+'</td><td class="r">'+eur0(tt)+'</td></tr>';
+  bom.innerHTML=html;
+}
+
+function renderCost(R){
+  const c=R.sel, uni=isUnica();
+  $("cardExt").hidden = !uni; $("cardAuto").hidden = uni; $("cardVoci").hidden = uni;
+  for(let i=0;i<NCFG;i++){ const cc=R.cols[i]; $("oh"+i).textContent = cc.valid ? cc.n+" impronte" : "–"; $("ou"+i).textContent = cc.valid && cc.m ? eur0(cc.m.ext) : "–"; }
+  if(!c){ $("tiles8").innerHTML=""; return; }
+  const m=c.m;
+  // voci auto
+  const autoL = m.lines.filter(l=>l.ri===undefined && l.cat!=="Stampo");
+  $("auto").innerHTML = '<tr><th class="l">Voce</th><th class="l">Categoria</th><th>Quantità</th><th class="r">Importo</th></tr>' +
+    (autoL.length ? autoL.map(l=>'<tr><td class="l">'+esc(l.desc)+'</td><td class="l">'+esc(l.cat)+'</td><td>'+esc(l.qt)+'</td><td class="r out">'+eur(l.amt)+'</td></tr>').join("") :
+     '<tr><td class="l" colspan="4">'+(m.missingGeo?"Ingombro del pezzo mancante (step 2).":"Nessuna voce.")+'</td></tr>');
+  const catSum = {}; VCATS.forEach(k=>catSum[k]=0);
+  m.lines.forEach(l=>{ if(l.ri!==undefined){ const el=$("va_"+l.ri); if(el) el.textContent = eur(l.amt)+(l.qt?" · "+l.qt:""); } if(catSum[l.cat]!==undefined) catSum[l.cat]+=l.amt; });
+  VCATS.forEach((k,i)=>{ const el=$("vc_"+i); if(el) el.textContent = eur(catSum[k]); });
+  const mg = m.price - m.cost;
+  $("tiles8").innerHTML =
+    '<div class="tile"><b>'+esc(c.n)+'</b><span>impronte quotate'+(R.auto?' (la più economica)':'')+'</span></div>'+
+    '<div class="tile"><b>'+esc(eur0(uni?m.ext:m.direct))+'</b><span>'+(uni?'stampo esterno':'costo diretto stampo')+'</span></div>'+
+    '<div class="tile"><b>'+esc(eur0(m.prog))+'</b><span>progettazione</span></div>'+
+    '<div class="tile"><b>'+esc(eur0(m.cost))+'</b><span>costo totale con imprevisti</span></div>'+
+    '<div class="tile main"><b>'+esc(eur0(m.price))+'</b><span>prezzo di vendita (prima dello sconto)</span></div>'+
+    '<div class="tile"><b>'+esc(eur0(mg))+'</b><span>margine ('+esc(pct(m.price>0?mg/m.price:NaN,1))+')</span></div>';
+}
+
+const CMP = [
+  {g:"Configurazione"},
+  {l:"Numero di impronte", f:c=>fmt(c.n,0), strong:true},
+  {l:"Disposizione", f:c=>c.geo? c.geo.cols+" × "+c.geo.rows : "–"},
+  {l:"Tempo ciclo (s)", f:c=>fmt(c.ciclo,1)},
+  {g:"Capacità produttiva"},
+  {l:"Stampi in parallelo", f:c=>fmt(c.nst,0)},
+  {l:"Pezzi buoni/ora per stampo", f:c=>fmt(c.pzh,1)},
+  {l:"Capacità annua (pezzi buoni)", f:c=>fmt(c.capY,0)},
+  {l:"Copertura dell’anno di picco", n:"Deve essere ≥ 1 + margine di capacità", f:c=>fmt(c.cop,2)+"×"},
+  {l:"Saturazione pressa nell’anno di picco", f:c=>pct(c.satPeak,0)},
+  {g:"Stampo"},
+  {l:"Ingombro stimato (mm)", f:c=>c.geo? fmt(c.geo.Wm,0)+" × "+fmt(c.geo.Hm,0)+" × "+fmt(c.geo.T,0) : "–"},
+  {l:"Peso acciaio grezzo (kg)", f:c=>c.geo? fmt(c.geo.kgTot,0) : "–"},
+  {l:"Cicli totali del programma per stampo", f:c=>fmt(c.cicliTot,0)},
+  {l:"Durata dello stampo (anni)", n:"Vita prevista ÷ cicli medi annui", f:c=>fmt(c.anniVita,1)},
+  {g:"Verifiche"},
+  {l:"Utilizzo capacità di iniezione", f:c=>pct(c.shotp,0)},
+  {l:"Utilizzo forza di chiusura", f:c=>pct(c.fclp,0)},
+  {l:"Corsa di dosaggio (D)", f:c=>fmt(c.dstroke,2)},
+  {l:"Tempo di permanenza (min)", n:"0,8 × volume canali vite ÷ volume shot × ciclo", f:c=>fmt(c.perm,1)},
+  {l:"Anno di picco coperto", k:"k_dom"},
+  {l:"Capacità di iniezione", k:"k_shot"},
+  {l:"Corsa di dosaggio", k:"k_D"},
+  {l:"Tempo di permanenza", k:"k_perm"},
+  {l:"Forza di chiusura", k:"k_F"},
+  {l:"Limite qualità", k:"k_q"},
+  {l:"Passaggio colonne", k:"k_dim"},
+  {l:"Altezza stampo", k:"k_h"},
+  {l:"Vita dello stampo", k:"k_vita"},
+  {l:"Esito complessivo", k:"esito", strong:true},
+  {g:"Costi"},
+  {l:"Progettazione (€)", f:c=>eur0(c.m.prog)},
+  {l:"Stampo + progettazione: costo con imprevisti (€)", f:c=>eur0(c.m.cost)},
+  {l:"Stampo + progettazione: prezzo di vendita (€)", f:c=>eur0(c.m.price)},
+  {l:"Valore stampo nel confronto (€)", f:c=>eur0(c.c_stampo)},
+  {l:"Ammortamento stampo (€/pz)", f:c=>fmt(c.c_amm,4)},
+  {l:"Costo pressa (€/pz)", f:c=>fmt(c.c_pressa,4)},
+  {l:"Costo materiale (€/pz buono)", n:"Canali considerati persi", f:c=>fmt(c.c_mat,4)},
+  {l:"Costo totale (€/pz)", f:c=>fmt(c.c_tot,4), strong:true},
+  {l:"Costo totale del programma (€)", f:c=>eur0(c.c_prog)},
+  {l:"Configurazione più economica", best:true, strong:true}
+];
+function renderCmp(R){
+  let h="";
+  CMP.forEach(r=>{
+    if(r.g){ h+='<tr class="grp"><td colspan="'+(NCFG+1)+'">'+esc(r.g)+'</td></tr>'; return; }
+    h+='<tr'+(r.strong?' class="strong"':'')+'><td>'+esc(r.l)+(r.n?'<span class="rownote">'+esc(r.n)+'</span>':'')+'</td>';
+    R.cols.forEach(c=>{
+      if(!c.valid){ h+='<td class="nd">–</td>'; return; }
+      if(r.k){ const v=c[r.k]; h+='<td class="'+clsOf(v)+'">'+esc(v)+'</td>'; }
+      else if(r.best){ h+= c.isBest ? '<td class="best">◄ MIGLIORE</td>' : (c.i===R.si ? '<td class="out">quotata</td>' : '<td class="out"></td>'); }
+      else h+='<td class="out">'+esc(r.f(c))+'</td>';
+    });
+    h+='</tr>';
+  });
+  $("cmp").innerHTML=h;
+  drawChart(R);
+  const c=R.sel, y0=parseInt(D.qty.start,10);
+  if(!c){ $("yr2").innerHTML=""; return; }
+  let t='<tr><th class="l">Anno</th><th class="r">Pezzi</th><th class="r">Ore macchina</th><th class="r">Saturazione pressa</th><th class="r">Quota ammortamento</th></tr>';
+  c.years.forEach((y,i)=>{ if(!(y.q>0)) return; t+='<tr><td class="l">'+(isFinite(y0)?(y0+i):"Anno "+(i+1))+'</td><td class="r">'+fmt(y.q,0)+'</td><td class="r">'+fmt(y.oreM,0)+'</td><td class="r '+(y.sat>1?'bad':(y.sat>0.9?'warn':''))+'">'+pct(y.sat,0)+'</td><td class="r">'+eur0(c.c_stampo*y.q/R.Qtot)+'</td></tr>'; });
+  t+='<tr class="tot"><td class="l">Totale</td><td class="r">'+fmt(R.Qtot,0)+'</td><td class="r">'+fmt(R.Qtot/(c.pzh*R.nst),0)+'</td><td></td><td class="r">'+eur0(c.c_stampo)+'</td></tr>';
+  $("yr2").innerHTML=t;
+}
+function drawChart(R){
+  const cols=R.cols, host=$("chart");
+  const vals=cols.filter(c=>c.valid).map(c=>c.c_tot).filter(x=>isFinite(x));
+  if(!vals.length){ host.innerHTML='<p class="sub">Completa i dati per vedere il grafico.</p>'; return; }
+  const W=760,H=260,L=56,Rr=12,T=24,B=40, max=Math.max.apply(null,vals)*1.12, bw=(W-L-Rr)/NCFG;
+  let s='<svg viewBox="0 0 '+W+' '+H+'" width="100%" role="img" aria-label="Costo totale per pezzo al variare delle impronte">';
+  for(let g=0;g<=4;g++){ const y=T+(H-T-B)*(1-g/4); s+='<line class="axis" x1="'+L+'" x2="'+(W-Rr)+'" y1="'+y+'" y2="'+y+'"/><text class="muted" x="'+(L-6)+'" y="'+(y+4)+'" text-anchor="end">'+fmt(max*g/4,3)+'</text>'; }
+  cols.forEach((c,i)=>{ const x=L+i*bw+bw*.18, w=bw*.64;
+    if(c.valid && isFinite(c.c_tot)){ const hh=(H-T-B)*c.c_tot/max, y=H-B-hh, fill=c.isBest?"var(--bar-best)":(c.feasible?"var(--bar)":"var(--bar-off)");
+      s+='<rect x="'+x+'" y="'+y+'" width="'+w+'" height="'+hh+'" rx="3" fill="'+fill+'"/><text x="'+(x+w/2)+'" y="'+(y-5)+'" text-anchor="middle">'+fmt(c.c_tot,3)+'</text>'; }
+    s+='<text x="'+(x+w/2)+'" y="'+(H-B+16)+'" text-anchor="middle">'+(c.valid?c.n:"–")+'</text>';
+    if(c.valid && !c.feasible && isFinite(c.c_tot)) s+='<text class="muted" x="'+(x+w/2)+'" y="'+(H-B+30)+'" text-anchor="middle" style="font-size:10px">non fatt.</text>'; });
+  s+='<text class="muted" x="'+((W+L)/2)+'" y="'+(H-2)+'" text-anchor="middle">numero di impronte</text><text class="muted" x="4" y="14">€/pz</text></svg>';
+  s+='<div class="legend"><span><i style="background:var(--bar-best)"></i>più economica tra le fattibili</span><span><i style="background:var(--bar)"></i>fattibile</span><span><i style="background:var(--bar-off)"></i>non fattibile</span></div>';
+  host.innerHTML=s;
+}
+
+/* ============================================================ preventivo */
+function ph(s,l){ return s && String(s).trim() ? esc(s) : '<span class="ph">['+esc(l)+']</span>'; }
+function renderSheet(R){
+  const c=R.sel;
+  $("qhint").textContent = c ? "Configurazione quotata: "+c.n+" impronte"+(R.auto?" (la più economica tra le fattibili)":"")+" – esito: "+c.esito.toLowerCase()+". Si cambia nel riepilogo a lato." : "Nessuna configurazione valida.";
+  if(!c || !isFinite(c.m.f)){ $("sheet").innerHTML='<p>Il prezzo non è calcolabile: controlla gli step segnalati in rosso.</p>'; return; }
+  const m=c.m, f=m.f, uni=isUnica(), g=c.geo;
+  const cats = uni ? ["Progettazione","Stampo","Collaudo e documentazione"] : ["Progettazione"].concat(VCATS);
+  const catAmt={}; let sub=0;
+  cats.forEach(k=>{ const pre = k==="Progettazione" ? m.prog : m.lines.filter(l=>l.cat===k).reduce((a,l)=>a+l.amt,0); catAmt[k]=r2(pre*f); sub+=catAmt[k]; });
+  sub=r2(sub);
+  const sc=r2(sub*n0(D.quote.sconto)/100), imp=r2(sub-sc), iva=r2(imp*n0(D.quote.iva)/100), tot=r2(imp+iva);
+  const matL = R.mat.label;
+  const obj = (R.nst>1 ? R.nst+" stampi uguali a iniezione " : "Stampo a iniezione ")+(D.job.tipo==="LSR"?"LSR":"termoplastico")+" a "+c.n+" impronte"+(D.part.desc&&D.part.desc.trim()?" – "+D.part.desc.trim():"");
+  let h='<div class="head"><div><b>'+ph(D.quote.from,"Ragione sociale")+'</b><br>'+ph(D.quote.fromaddr,"Indirizzo")+'<br>'+
+    (D.quote.fromiva&&D.quote.fromiva.trim()?'P.IVA / C.F. '+esc(D.quote.fromiva):'<span class="ph">[P.IVA / C.F.]</span>')+'<br>'+ph(D.quote.fromcontact,"Contatti")+'</div>'+
+    '<div class="docno"><h3>Preventivo</h3>N° '+ph(D.job.num,"numero")+' del '+ph(dIT(D.job.date),"data")+'<br><span class="small">Validità: '+esc(fmt(n0(D.job.valid),0))+' giorni</span></div></div>';
+  h+='<div class="to">Spett.le <b>'+ph(D.job.cliente,"Cliente")+'</b>'+(D.job.referente&&D.job.referente.trim()?'<br>Alla c.a. di '+esc(D.job.referente):'')+(D.job.rif&&D.job.rif.trim()?'<br>Rif.: '+esc(D.job.rif):'')+'</div>';
+  h+='<p><b>Oggetto:</b> '+esc(obj)+'</p>';
+  const sp=[];
+  sp.push(["Processo", (D.job.tipo==="LSR"?"LSR (silicone liquido)":"Iniezione termoplastico")+", "+lbl(FEEDS.map(x=>[x[0],x[1].toLowerCase()]),D.proc.feed)]);
+  sp.push(["Numero di impronte", c.n+(g?" (disposizione "+g.cols+" × "+g.rows+")":"")]);
+  if(D.part.desc&&D.part.desc.trim()) sp.push(["Pezzo", D.part.desc.trim()]);
+  sp.push(["Materiale da stampare", matL]);
+  sp.push(["Peso del pezzo", fmt(R.peso,1)+" g ("+fmt(R.vol,2)+" cm³)"]);
+  const cl = CLASSI_S.find(x=>x.k===D.mold.classe);
+  sp.push(["Classe dello stampo", (cl?cl.label:"")+(R.vita>0?", vita prevista "+fmt(R.vita,0)+" cicli":"")]);
+  if(!uni){ const sF=steel(D.mold.fig); sp.push(["Acciaio figure", D.mold.fig+(sF.stato?" – "+sF.stato:"")]); sp.push(["Portastampo", D.mold.base==="norm"?"normalizzato":"costruito"]); }
+  if(g) sp.push(["Dimensioni stampo indicative", fmt(g.Wm,0)+" × "+fmt(g.Hm,0)+" × "+fmt(g.T,0)+" mm"]);
+  if(D.quote.perf){
+    { const pn=(D.press.nome||"").trim(); sp.push(["Pressa di riferimento", pn+(R.full&&R.F>0&&pn.indexOf(fmt(R.F,0))<0?" ("+fmt(R.F,0)+" t)":"")]); }
+    sp.push(["Ciclo atteso", fmt(c.ciclo,1)+" s"]);
+    sp.push(["Produzione stimata", fmt(c.pzh,0)+" pezzi buoni/ora, circa "+fmt(c.capY,0)+" pezzi/anno"]);
+  }
+  h+='<h4>Caratteristiche</h4><table>'+sp.map(([a,b])=>'<tr><td style="width:36%"><b>'+esc(a)+'</b></td><td>'+esc(b)+'</td></tr>').join("")+'</table>';
+  if(D.quote.perf) h+='<p class="small" style="margin:6px 0 0">Dimensioni e prestazioni indicative, calcolate sui dati disponibili: non costituiscono garanzia.</p>';
+  if(D.quote.showQty){
+    const y0=parseInt(D.qty.start,10);
+    const rows=R.ys.map((q,i)=>[isFinite(y0)?String(y0+i):"Anno "+(i+1),q]).filter(r=>r[1]>0);
+    h+='<h4>Quantità previste</h4><table><tr><th>Anno</th><th class="n">Pezzi</th></tr>'+rows.map(r=>'<tr><td>'+esc(r[0])+'</td><td class="n">'+esc(fmt(r[1],0))+'</td></tr>').join("")+
+       '<tr class="tot"><td>Totale</td><td class="n">'+esc(fmt(R.Qtot,0))+'</td></tr></table>';
+  }
+  h+='<h4>Offerta economica</h4><table><tr><th>Voce</th><th class="n">Importo</th></tr>';
+  cats.forEach(k=>{
+    if(!(catAmt[k]>0)) return;
+    const name = k==="Stampo" ? "Costruzione stampo" : (k==="Materiali"?"Materiali e componenti":k);
+    h+='<tr class="cat"><td>'+esc(name)+'</td><td class="n">'+esc(eur(catAmt[k]))+'</td></tr>';
+    if(D.quote.detail){
+      if(k==="Progettazione"){ if(!isFinite(num(D.cost.prog_ovr))) h+='<tr class="line"><td>Progettazione e CAM – '+esc(FQ.format(m.ph))+' h</td><td class="n">'+esc(eur(r2(m.prog*f)))+'</td></tr>'; }
+      else m.lines.filter(l=>l.cat===k && l.amt>0).forEach(l=>{ h+='<tr class="line"><td>'+esc(l.desc)+(l.qt?' – '+esc(l.qt):'')+'</td><td class="n">'+esc(eur(r2(l.amt*f)))+'</td></tr>'; });
+    }
+  });
+  h+='<tr class="tot"><td>Totale stampo e progettazione</td><td class="n">'+esc(eur(sub))+'</td></tr>';
+  if(sc>0) h+='<tr><td>Sconto ('+esc(fmt(n0(D.quote.sconto),1))+'%)</td><td class="n">− '+esc(eur(sc))+'</td></tr><tr><td><b>Imponibile</b></td><td class="n"><b>'+esc(eur(imp))+'</b></td></tr>';
+  h+='<tr><td>IVA '+esc(fmt(n0(D.quote.iva),1))+'%</td><td class="n">'+esc(eur(iva))+'</td></tr><tr class="tot"><td>Totale</td><td class="n">'+esc(eur(tot))+'</td></tr></table>';
+  if(D.quote.showPiece && R.pc && isFinite(R.pc.price)){
+    const pc=R.pc, y0=parseInt(D.qty.start,10), ys=pc.years.filter(Boolean);
+    const e4 = x=>fmt(x,4)+" €";
+    h+='<h4>Prezzo del pezzo stampato</h4><table><tr><th>Voce</th><th class="n">Valore</th></tr>';
+    h+='<tr><td><b>Prezzo unitario medio sul programma</b></td><td class="n"><b>'+esc(e4(pc.price))+'</b></td></tr>';
+    h+='<tr><td>Prezzo per 1.000 pezzi</td><td class="n">'+esc(eur(pc.price*1000))+'</td></tr>';
+    if(ys.length>1 && ys.some(y=>Math.abs(y.price-pc.price)/pc.price>0.005)) ys.forEach(y=>{ h+='<tr class="line"><td>Prezzo '+esc(isFinite(y0)?String(y0+y.i):"anno "+(y.i+1))+' ('+esc(fmt(y.q,0))+' pezzi)</td><td class="n">'+esc(e4(y.price))+'</td></tr>'; });
+    if(pc.peak) h+='<tr><td>Lotto minimo di produzione</td><td class="n">'+esc(fmt(pc.peak.lot,0))+' pezzi</td></tr>';
+    if(pc.pcsBox>0) h+='<tr><td>Imballo</td><td class="n">'+esc(fmt(pc.pcsBox,0))+' pezzi per scatola</td></tr>';
+    h+='<tr><td>Stampo</td><td class="n">'+(D.piece.amm==="si"?"ammortizzato nel prezzo del pezzo":"fatturato a parte, come sopra")+'</td></tr></table>';
+    h+='<p class="small" style="margin:6px 0 0">Prezzi IVA esclusa, validi per le quantità annue indicate.</p>';
+  }
+  const acc=Math.min(100,Math.max(0,n0(D.quote.acconto)));
+  h+='<h4>Condizioni</h4><table><tr><td style="width:36%"><b>Consegna</b></td><td>'+esc(fmt(n0(D.quote.weeks),0))+' settimane dalla conferma d’ordine</td></tr>'+
+     '<tr><td><b>Pagamento</b></td><td>'+esc(fmt(acc,0))+'% alla conferma d’ordine; '+esc(fmt(100-acc,0))+'% '+esc(D.quote.saldo||"")+'</td></tr>'+
+     '<tr><td><b>Validità offerta</b></td><td>'+esc(fmt(n0(D.job.valid),0))+' giorni dalla data del preventivo</td></tr></table>';
+  if(D.quote.note && D.quote.note.trim()) h+='<h4>Note</h4><p class="small" style="margin:0">'+esc(D.quote.note).replace(/\n/g,"<br>")+'</p>';
+  h+='<div class="sign"><div>Per accettazione (timbro e firma del cliente)</div><div>Data</div></div>';
+  $("sheet").innerHTML=h;
+}
+
+/* ============================================================ riepilogo */
+let SELSIG = "";
+function renderSum(R){
+  const host=$("sum");
+  const sig = R.cols.map(c=>c.valid?c.n:"-").join(",")+"|"+D.quote.sel;
+  if(sig!==SELSIG){
+    SELSIG = sig;
+    host.innerHTML = '<h2>Riepilogo</h2><div class="field stack" style="border:0;padding-top:0"><label for="selCfg">Configurazione quotata</label><div class="inwrap"><select id="selCfg"></select></div></div><div id="sumBody"></div>';
+    const s=$("selCfg");
+    s.innerHTML='<option value="auto">La più economica tra le fattibili</option>'+R.cols.map(c=>c.valid?'<option value="'+c.i+'">'+c.n+' impronte (colonna '+(c.i+1)+')</option>':'').join("");
+    s.value = String(D.quote.sel); if(s.value!==String(D.quote.sel)){ D.quote.sel="auto"; s.value="auto"; }
+    s.addEventListener("change",()=>{ D.quote.sel=s.value; save(); update(); });
+  }
+  const c=R.sel, b=$("sumBody");
+  if(!c){ b.innerHTML='<p class="sub">Nessuna configurazione valida.</p>'; return; }
+  const badge = '<span class="badge '+(clsOf(c.esito)==="ok"?"ok":(clsOf(c.esito)==="warn"?"warn":"bad"))+'">'+esc(c.esito)+'</span>';
+  const rows = [
+    ["Impronte", c.n+(R.auto?" (auto)":"")],
+    ["Pressa", (D.press.nome||"–")+(R.full?"":" · a occhio")],
+    ["Saturazione nel picco", pct(c.satPeak,0)],
+    ["Corsa · permanenza", (isFinite(c.dstroke)?fmt(c.dstroke,1)+" D":"–")+" · "+(isFinite(c.perm)?fmt(c.perm,1)+" min":"–")],
+    ["Ingombro stampo", c.geo? fmt(c.geo.Wm,0)+" × "+fmt(c.geo.Hm,0)+" mm":"–"],
+    ["Acciaio grezzo", c.geo? fmt(c.geo.kgTot,0)+" kg":"–"],
+    ["Progettazione", eur0(c.m.prog)],
+    ["Costo stampo + prog.", eur0(c.m.cost)],
+    ["Costo per pezzo (confronto)", fmt(c.c_tot,4)+" €"],
+    ["Prezzo del pezzo", R.pc&&isFinite(R.pc.price)? fmt(R.pc.price,4)+" €":"–"]
+  ];
+  b.innerHTML = '<div style="margin:4px 0 10px">'+badge+'</div><div class="row"><span>Prezzo stampo + progettazione</span></div><div class="big">'+esc(eur0(c.m.price))+'</div>'+
+    rows.map(([a,v])=>'<div class="row"><span>'+esc(a)+'</span><b>'+esc(v)+'</b></div>').join("");
+}
+
+/* ============================================================ file */
+function fname(){ const s=(x)=>String(x||"").trim().replace(/[^\w\-]+/g,"_").replace(/_+/g,"_").slice(0,40); return "Preventivo_"+(s(D.job.num)||"stampo")+(D.job.cliente?"_"+s(D.job.cliente):"")+".json"; }
+function isIOS(){ return /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform==="MacIntel" && navigator.maxTouchPoints>1); }
+function saveFile(){
+  const blob=new Blob([JSON.stringify(D,null,1)],{type:"application/json"});
+  if(isIOS() && navigator.canShare){
+    try{ const file=new File([blob], fname(), {type:"application/json"});
+      if(navigator.canShare({files:[file]})){
+        navigator.share({files:[file], title:fname()}).then(()=>{ $("saveMsg").textContent="File “"+fname()+"” condiviso: scegli “Salva in File” per archiviarlo."; }).catch(()=>{});
+        return; } }catch(e){}
+  }
+  const a=document.createElement("a"); a.href=URL.createObjectURL(blob); a.download=fname(); document.body.appendChild(a); a.click();
+  setTimeout(()=>{ URL.revokeObjectURL(a.href); a.remove(); },500);
+  $("saveMsg").textContent = "File “"+fname()+"” scaricato nella cartella dei download.";
+}
+function openFile(){ $("fileIn").value=""; $("fileIn").click(); }
+function rebuild(){ FIELDS.length=0; ROS.length=0; SELSIG="";
+  ["f1","f2","f3","f4","f4b","f5","f5b","ro6","f7a","f7b","f8a","f8ext","f8p","f10a","f10b","f10c","f6n","f8q","g10a","g10ov","g10b","g10q","g10c"].forEach(id=>$(id).innerHTML="");
+  buildAll(); update(); }
+function nextNum(s){ const m=/^(.*?)(\d+)$/.exec(String(s||"")); if(!m) return s; const n=String(parseInt(m[2],10)+1).padStart(m[2].length,"0"); return m[1]+n; }
+
+/* ============================================================ avvio */
+function buildAll(){
+  renderFields("f1",F1); renderFields("f2",F2); renderFields("f3",F3); renderFields("f4",F4); renderFields("f4b",F4B); renderFields("f5",F5); renderFields("f5b",F5B);
+  renderFields("ro6",RO6); renderFields("f7a",F7A); renderFields("f7b",F7B);
+  renderFields("f8a",F8A); renderFields("f8ext",F8EXT); renderFields("f8p",F8P);
+  renderFields("f10a",F10A); renderFields("f10b",F10B); renderFields("f10c",F10C);
+  renderFields("f6n",F6N); renderFields("f8q",F8Q); renderFields("g10a",G10A); renderFields("g10ov",G10OV); renderFields("g10b",G10B); renderFields("g10q",G10Q); renderFields("g10c",G10C);
+  buildOps(); buildOpsAdd();
+  buildYears(); buildCfgEd(); buildLib(); buildMatLib(); buildRates(); buildVoci(); buildOvr();
+}
+function init(){
+  load(); buildSteps(); buildAll(); update(); go(CUR);
+  $("btnPrev").addEventListener("click",()=>go(CUR-1));
+  $("btnNext").addEventListener("click",()=>go(CUR+1));
+  $("btnAddMat").addEventListener("click",()=>{ D.matlib.push(Object.assign(clone(MATLIB_BLANK),{code:"NUOVO",name:"Nuovo materiale"})); save(); buildMatLib(); syncFields(); update(); });
+  $("btnAddFill").addEventListener("click",()=>{ D.fills.push({code:"NUOVA",name:"Nuova carica",rho:""}); save(); buildMatLib(); syncFields(); update(); });
+  $("btnAddSteel").addEventListener("click",()=>{ D.lib.push({code:"nuovo",desc:"",stato:"",eurkg:0,tratt:0,lav:1}); save(); buildLib(); syncFields(); update(); });
+  [$("btnSave"),$("btnSave2")].forEach(b=>b.addEventListener("click",saveFile));
+  [$("btnOpen"),$("btnOpen2")].forEach(b=>b.addEventListener("click",openFile));
+  $("fileIn").addEventListener("change",()=>{
+    const f=$("fileIn").files[0]; if(!f) return;
+    const rd=new FileReader();
+    rd.onload=()=>{ try{ const d=JSON.parse(rd.result); if(!d || d.app!=="preventivo-stampo") throw new Error("formato");
+        D = merge(defaults(), migrate(d)); D.v=5; save(); rebuild(); go(0); $("saveMsg").textContent="Aperto il file “"+f.name+"”."; window.alert("Preventivo “"+f.name+"” aperto."); }
+      catch(e){ window.alert("Il file non è un preventivo valido di questo programma."); } };
+    rd.readAsText(f);
+  });
+  const doNew=()=>{ if(!window.confirm("Iniziare un nuovo preventivo? Commessa, componente, quantità e configurazioni tornano ai valori iniziali; librerie di materiali e acciai, tariffe, voci, pressa e dati azienda restano. Salva prima su file se ti serve quello attuale.")) return;
+    const d0=defaults(), keep={piece:D.piece, matlib:D.matlib, fills:D.fills, lib:D.lib, rates:D.rates, rows:D.cost.rows, press:D.press, mold:D.mold, from:[D.quote.from,D.quote.fromaddr,D.quote.fromiva,D.quote.fromcontact], note:D.quote.note, num:nextNum(D.job.num)};
+    D=d0; D.piece=keep.piece; D.piece.ops=[]; D.matlib=keep.matlib; D.fills=keep.fills; D.lib=keep.lib; D.rates=keep.rates; D.cost.rows=keep.rows; D.press=keep.press; D.mold=keep.mold; D.quote.note=keep.note;
+    [D.quote.from,D.quote.fromaddr,D.quote.fromiva,D.quote.fromcontact]=keep.from; D.job.num=keep.num;
+    D.job.cliente=""; D.part.desc=""; save(); rebuild(); go(0); };
+  [$("btnNew"),$("btnNew2")].forEach(b=>b.addEventListener("click",doNew));
+  $("btnReset").addEventListener("click",()=>{ if(!window.confirm("Ripristinare tutti i valori di esempio? Tutti i dati in questo browser andranno persi.")) return; D=defaults(); save(); rebuild(); go(0); });
+  $("btnTheme").addEventListener("click",()=>{ const r=document.documentElement; const cur=r.getAttribute("data-theme")||(window.matchMedia("(prefers-color-scheme: dark)").matches?"dark":"light"); r.setAttribute("data-theme",cur==="dark"?"light":"dark"); });
+  $("btnPrint").addEventListener("click",()=>window.print());
+}
+init();
+if("serviceWorker" in navigator && (location.protocol==="https:" || location.hostname==="localhost")){
+  window.addEventListener("load",()=>{ navigator.serviceWorker.register("sw.js").catch(()=>{}); });
+}
+})();
+</script>
+</body>
+</html>
